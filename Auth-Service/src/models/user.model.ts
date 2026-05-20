@@ -1,17 +1,20 @@
 import mongoose, { Schema, type Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
+import type { UserRole } from '../utils/types.js';
 
 export interface IUser extends Document {
   username: string;
   email: string;
   password: string;
+  role: UserRole;
   comparePassword(password: string): Promise<boolean>;
 }
 
 const UserSchema: Schema = new Schema({
   username: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true }
+  password: { type: String, required: true },
+  role: { type: String, enum: ['admin', 'seller', 'buyer'], default: 'buyer', required: true }
 }, {
   timestamps: true
 });

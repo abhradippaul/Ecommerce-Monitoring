@@ -1,6 +1,6 @@
 import User from '../models/user.model.js';
 import type { IUser } from '../models/user.model.js';
-import type { RegisterInput, UpdateUserInput } from '../schemas/user.schema.js';
+import type { RegisterInput, UpdateUserInput } from '../utils/types.js';
 
 export class AuthService {
   async register(data: RegisterInput): Promise<IUser> {
@@ -27,6 +27,7 @@ export class AuthService {
     if (data.username) user.username = data.username;
     if (data.email) user.email = data.email;
     if (data.password) user.password = data.password;
+    if (data.role) user.role = data.role;
 
     return await user.save();
   }
