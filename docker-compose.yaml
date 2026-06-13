@@ -1,4 +1,14 @@
 services:
+  floci:
+    image: floci/floci:latest
+    ports:
+      - "4566:4566"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data:/app/data
+    environment:
+      FLOCI_STORAGE_MODE: hybrid
+
   auth-service:
     build: ./Auth-Service
     container_name: auth-service
@@ -7,7 +17,7 @@ services:
     env_file:
       - ./Auth-Service/.env
     networks:
-      - nodejs-monitoring
+      - ecommerce-monitoring
     restart: unless-stopped
 
   item-service:
@@ -18,7 +28,7 @@ services:
     env_file:
       - ./Item-Service/.env
     networks:
-      - nodejs-monitoring
+      - ecommerce-monitoring
     restart: unless-stopped
 
   order-service:
@@ -29,7 +39,7 @@ services:
     env_file:
       - ./Order-Service/.env
     networks:
-      - nodejs-monitoring
+      - ecommerce-monitoring
     restart: unless-stopped
 
   load-test:
@@ -49,9 +59,12 @@ services:
     command: >
       sh -c "pip install requests && python /scripts/load_test.py"
     networks:
-      - nodejs-monitoring
+      - ecommerce-monitoring
     restart: no
 
 networks:
-  nodejs-monitoring:
+  ecommerce-monitoring:
     driver: bridge
+
+volumes:
+  vault-data:

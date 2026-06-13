@@ -1,11 +1,8 @@
 import jwt from 'jsonwebtoken';
 import type { JwtPayload, Secret, SignOptions } from 'jsonwebtoken';
 import type { AccessTokenPayload, AuthUser, RefreshTokenPayload, TokenUser, UserRole } from './types.js';
+import { config } from './config.js';
 
-const ACCESS_TOKEN_EXPIRY = (process.env.ACCESS_TOKEN_EXPIRY ?? '1h') as NonNullable<SignOptions['expiresIn']>;
-const REFRESH_TOKEN_EXPIRY = (process.env.REFRESH_TOKEN_EXPIRY ?? '7d') as NonNullable<SignOptions['expiresIn']>;
-const ACCESS_TOKEN_SECRET: Secret = process.env.ACCESS_TOKEN_SECRET ?? 'access-token-secret';
-const REFRESH_TOKEN_SECRET: Secret = process.env.REFRESH_TOKEN_SECRET ?? 'refresh-token-secret';
 const USER_ROLES: readonly UserRole[] = ['admin', 'seller', 'buyer'];
 
 const isJwtPayload = (payload: string | JwtPayload): payload is JwtPayload => {
@@ -17,23 +14,35 @@ const isUserRole = (role: unknown): role is UserRole => {
 };
 
 const generateAccessToken = (user: TokenUser) => {
+    const secret: Secret = config.accessTokenSecret;
+    if (!secret) {
+        throw new Error('ACCESS_TOKEN_SECRET is not configured');
+    }
     return jwt.sign(
         { id: user.id.toString(), role: user.role } satisfies AccessTokenPayload,
-        ACCESS_TOKEN_SECRET,
-        { expiresIn: ACCESS_TOKEN_EXPIRY }
+        secret,
+        { expiresIn: config.accessTokenExpiry as NonNullable<SignOptions['expiresIn']> }
     );
 };
 
 const generateRefreshToken = (user: Pick<TokenUser, 'id'>) => {
+    const secret: Secret = config.refreshTokenSecret;
+    if (!secret) {
+        throw new Error('REFRESH_TOKEN_SECRET is not configured');
+    }
     return jwt.sign(
         { id: user.id.toString() } satisfies RefreshTokenPayload,
-        REFRESH_TOKEN_SECRET,
-        { expiresIn: REFRESH_TOKEN_EXPIRY }
+        secret,
+        { expiresIn: config.refreshTokenExpiry as NonNullable<SignOptions['expiresIn']> }
     );
 };
 
 const verifyAccessToken = (token: string): AuthUser => {
-    const decoded = jwt.verify(token, ACCESS_TOKEN_SECRET);
+    const secret: Secret = config.accessTokenSecret;
+    if (!secret) {
+        throw new Error('ACCESS_TOKEN_SECRET is not configured');
+    }
+    const decoded = jwt.verify(token, secret);
 
     if (!isJwtPayload(decoded) || typeof decoded.id !== 'string' || !isUserRole(decoded.role)) {
         throw new Error('Invalid access token payload');
@@ -46,7 +55,11 @@ const verifyAccessToken = (token: string): AuthUser => {
 };
 
 const verifyRefreshToken = (token: string): RefreshTokenPayload => {
-    const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET);
+    const secret: Secret = config.refreshTokenSecret;
+    if (!secret) {
+        throw new Error('REFRESH_TOKEN_SECRET is not configured');
+    }
+    const decoded = jwt.verify(token, secret);
 
     if (!isJwtPayload(decoded) || typeof decoded.id !== 'string') {
         throw new Error('Invalid refresh token payload');

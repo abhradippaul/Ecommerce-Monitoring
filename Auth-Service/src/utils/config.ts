@@ -10,6 +10,12 @@ export const config = {
   logToFile: process.env.LOG_TO_FILE !== 'false',
   logFile: process.env.LOG_FILE || 'logs/combined.log',
   errorFile: process.env.ERROR_FILE || 'logs/error.log',
+  awsSecretArn: process.env.AWS_SECRET_ARN || '',
+  accessTokenSecret: process.env.ACCESS_TOKEN_SECRET || '',
+  refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET || '',
+  accessTokenExpiry: process.env.ACCESS_TOKEN_EXPIRY || '',
+  refreshTokenExpiry: process.env.REFRESH_TOKEN_EXPIRY || '',
+  jwtSecret: process.env.JWT_SECRET || '',
   metrics: {
     httpRequestDurationName: 'http_request_duration_seconds',
     httpRequestDurationHelp: 'Duration of HTTP requests in seconds',

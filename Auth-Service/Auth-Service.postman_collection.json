@@ -70,6 +70,23 @@
       "item": [
         {
           "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.data) {",
+                  "  const userId = response.data._id || response.data.id;",
+                  "  if (userId) {",
+                  "    pm.collectionVariables.set('userId', userId);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -108,8 +125,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "const response = pm.response.json();",
-                  "if (response.data && response.data.token) {",
-                  "  pm.collectionVariables.set('token', response.data.token);",
+                  "if (response.data && response.data.access_token) {",
+                  "  pm.collectionVariables.set('token', response.data.access_token);",
                   "}"
                 ]
               }

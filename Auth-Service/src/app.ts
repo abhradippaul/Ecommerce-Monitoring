@@ -4,22 +4,52 @@ import { loggerMiddleware } from './middleware/logger.middleware.js';
 import healthRoutes from './routes/health.routes.js';
 import infoRoutes from './routes/info.routes.js';
 import authRoutes from './routes/auth.routes.js';
-import { register, startMonitoring } from './utils/metrics.js';
 import logger from './logger/index.js';
-import logRoutes from './utils/logRoutes.js';
-import { config } from './utils/config.js';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger.js';
 
 const app: Express = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(startMonitoring);
 app.use(loggerMiddleware);
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use('/health', healthRoutes);
 app.use('/info', infoRoutes);
 app.use('/auth', authRoutes);
 
+/**
+ * @openapi
+ * /slow:
+ *   get:
+ *     summary: Simulate a slow request
+ *     description: Delays the response by a given duration (in milliseconds) to simulate high latency or slow network conditions.
+ *     tags:
+ *       - Monitoring
+ *     parameters:
+ *       - in: query
+ *         name: duration
+ *         schema:
+ *           type: integer
+ *           default: 3000
+ *         description: The duration to delay the response in milliseconds.
+ *     responses:
+ *       200:
+ *         description: Successfully simulated slow request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: slow
+ *                 duration:
+ *                   type: integer
+ *                   example: 3000
+ */
 app.get('/slow', async (req: Request, res: Response) => {
   const duration = parseInt(req.query.duration as string) || 3000;
   logger.info(`Simulating slow request, ${duration}`);
@@ -27,25 +57,10 @@ app.get('/slow', async (req: Request, res: Response) => {
   res.json({ status: 'slow', duration });
 });
 
-app.get('/metrics', async (_req, res) => {
-  try {
-    logger.info('Metrics requested');
-    res.set('Content-Type', register.contentType);
-    res.end(await register.metrics());
-  } catch (err) {
-    logger.error(`Error generating metrics: ${err}`);
-    res.status(500).end(err);
-  }
-});
-
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   logger.error(`Unhandled error ${err}`);
   res.status(500).json({ error: 'Internal Server Error' });
 });
-
-if (config.nodeEnv === 'dev') {
-  logRoutes(app);
-}
 
 export default app;
