@@ -1,4 +1,5 @@
-import { createLogger, format, transports } from 'winston';
+import { createLogger, format } from 'winston';
+import { OpenTelemetryTransportV3 } from '@opentelemetry/winston-transport';
 import { config } from '../utils/config.js';
 
 const productionLogger = () => {
@@ -6,9 +7,7 @@ const productionLogger = () => {
         level: config.logLevel,
         format: format.json(),
         transports: [
-            new transports.File({ filename: config.logFile }),
-            new transports.File({ filename: config.errorFile, level: 'error' }),
-            new transports.Console() // ONLY PRINTING LOGS IN TERMINAL
+            new OpenTelemetryTransportV3()
         ]
     });
 };

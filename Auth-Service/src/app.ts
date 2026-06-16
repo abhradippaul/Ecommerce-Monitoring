@@ -1,18 +1,29 @@
 import express from 'express';
 import type { Request, Response, NextFunction, Express } from 'express';
-import { loggerMiddleware } from './middleware/logger.middleware.js';
 import healthRoutes from './routes/health.routes.js';
 import infoRoutes from './routes/info.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import logger from './logger/index.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger.js';
+import { metrics } from '@opentelemetry/api';
 
 const app: Express = express();
 
+const meter = metrics.getMeter('my-app', '1.0.0');
+
+const requestCounter = meter.createCounter('http_requests_total', {
+  description: 'Total HTTP requests',
+});
+
+const latencyHistogram = meter.createHistogram('http_request_duration_ms', {
+  description: 'HTTP request latency',
+  unit: 'ms',
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(loggerMiddleware);
+
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
@@ -51,9 +62,12 @@ app.use('/auth', authRoutes);
  *                   example: 3000
  */
 app.get('/slow', async (req: Request, res: Response) => {
+  const start = Date.now();
+  requestCounter.add(1, { method: 'GET', route: '/slow' });
   const duration = parseInt(req.query.duration as string) || 3000;
   logger.info(`Simulating slow request, ${duration}`);
   await new Promise((resolve) => setTimeout(resolve, duration));
+  latencyHistogram.record(Date.now() - start, { route: '/slow' });
   res.json({ status: 'slow', duration });
 });
 

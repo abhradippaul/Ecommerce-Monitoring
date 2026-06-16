@@ -4,6 +4,10 @@ import { registerSchema, loginSchema, updateUserSchema } from '../schemas/user.s
 import logger from '../logger/index.js';
 import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
 import type { AuthenticatedRequest } from '../utils/types.js';
+import { trace } from '@opentelemetry/api';
+
+const span = trace.getActiveSpan();
+const spanCtx = span?.spanContext();
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -20,20 +24,38 @@ export const register = async (req: Request, res: Response) => {
     const user = await authService.register(validatedData);
 
     if (!user?._id) {
-      return res.status(500).json({
+      return res.status(400).json({
         message: "Registration failed",
         error: "Failed to register user"
       });
     }
 
-    logger.info(`User registered: ${user.username}`);
+    logger.info('User registered', {
+      trace_id: spanCtx?.traceId,
+      span_id: spanCtx?.spanId,
+      user_id: user._id,
+      http_method: 'POST',
+      http_route: '/api/auth/register',
+      http_status_code: 201,
+      duration_ms: 245
+    });
+
     return res.status(201).json({
       message: "Successfully registered user",
       data: user
     });
   } catch (error: any) {
-    logger.error(`Registration error: ${error.message}`);
-    return res.status(400).json({
+    logger.error('User registration failed', {
+      trace_id: spanCtx?.traceId,
+      span_id: spanCtx?.spanId,
+      user_id: '0',
+      http_method: 'POST',
+      http_route: '/api/auth/register',
+      http_status_code: 500,
+      duration_ms: 245
+    });
+
+    return res.status(500).json({
       message: "Registration failed",
       error: error.message
     });
