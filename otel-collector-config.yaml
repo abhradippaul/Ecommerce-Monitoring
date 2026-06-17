@@ -1,23 +1,4 @@
 receivers:
-  prometheus:
-    config:
-      scrape_configs:
-        - job_name: otel-collector
-          scrape_interval: 5s
-          static_configs:
-            - targets: [localhost:8888]
-        - job_name: item-service
-          scrape_interval: 5s
-          static_configs:
-            - targets: [localhost:3001]
-        - job_name: order-service
-          scrape_interval: 5s
-          static_configs:
-            - targets: [localhost:3003]
-        - job_name: auth-service
-          scrape_interval: 5s
-          static_configs:
-            - targets: [localhost:3002]
   otlp:
     protocols:
       grpc:
@@ -25,13 +6,23 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
 
+processors:
+  batch:
+    send_batch_size: 1024
+    timeout: 10s
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+
 exporters:
   prometheus:
-    endpoint: "0.0.0.0:8889"
-  debug:
-    verbosity: detailed
-  otlp:
-    endpoint: "tempo:4317"
+    endpoint: 0.0.0.0:8889
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
     tls:
       insecure: true
 
@@ -39,10 +30,13 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      exporters: [debug, otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/tempo]
     metrics:
-      receivers: [prometheus, otlp]
-      exporters: [debug, prometheus]
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
     logs:
       receivers: [otlp]
-      exporters: [debug]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/loki]

@@ -1,9 +1,9 @@
 import type { Request, Response } from 'express';
-import logger from '../logger/index.js';
+import { recordRequest } from '../utils/metrics.js';
 
-export const getHealth = (req: Request, res: Response) => {
-  logger.info('Health check requested');
-  res.status(200).json({
+export const getHealth = (_req: Request, res: Response) => {
+  recordRequest('GET', '/health');
+  return res.status(200).json({
     message: "Successfully fetched health status",
     data: {
       status: 'UP',
