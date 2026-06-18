@@ -3,10 +3,10 @@ name: Auth CI
 on:
   push:
     branches: [main, develop]
-    paths: ['Auth-Service/**']
+    paths: ['Auth-Service/**', ".github/workflows/auth-ci.yaml"]
   pull_request:
     branches: [main]
-    paths: ['Auth-Service/**']
+    paths: ['Auth-Service/**', ".github/workflows/auth-ci.yaml"]
 
 jobs:
   ci:
