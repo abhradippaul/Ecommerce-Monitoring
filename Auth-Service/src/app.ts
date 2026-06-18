@@ -5,8 +5,8 @@ import infoRoutes from './routes/info.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger.js';
-import { recordRequest, latencyHistogram } from './utils/metrics.js';
 import logger from './utils/logger.js';
+import { latencyHistogram, requestCounter } from './utils/metrics.js';
 
 const app: Express = express();
 
@@ -50,9 +50,9 @@ app.use('/auth', authRoutes);
  */
 app.get('/slow', async (req: Request, res: Response) => {
   const start = Date.now();
-  recordRequest('GET', '/slow');
   const duration = parseInt(req.query.duration as string) || 3000;
   await new Promise((resolve) => setTimeout(resolve, duration));
+  requestCounter.add(1, { route: '/slow' });
   latencyHistogram.record(Date.now() - start, { route: '/slow' });
   logger.info(`Slow request completed in ${duration}ms`, { route: '/slow', duration });
   return res.json({ status: 'slow', duration });
@@ -60,7 +60,7 @@ app.get('/slow', async (req: Request, res: Response) => {
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  recordRequest('ERROR', '/error');
+  requestCounter.add(1, { route: '/error' });
   res.status(500).json({ error: 'Internal Server Error' });
 });
 

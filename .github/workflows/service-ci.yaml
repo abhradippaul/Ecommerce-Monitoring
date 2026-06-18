@@ -1,0 +1,44 @@
+name: Service CI
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        required: true
+        type: string
+      node-version:
+        required: false
+        type: string
+        default: '24'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.service }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.6.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'pnpm'
+          cache-dependency-path: ${{ inputs.service }}/pnpm-lock.yaml
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Run Tests
+        run: pnpm test
+
+      - name: Build Service
+        run: pnpm run build

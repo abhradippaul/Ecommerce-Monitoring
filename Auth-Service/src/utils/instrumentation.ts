@@ -16,9 +16,7 @@ import { resourceFromAttributes } from '@opentelemetry/resources';
 diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.INFO);
 
 const sdk = new NodeSDK({
-    resource: resourceFromAttributes({
-        'service.name': 'auth-service',
-    }),
+    serviceName: 'auth-service',
     traceExporter: new OTLPTraceExporter({
         url: process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || 'http://localhost:4318/v1/traces',
     }),
@@ -27,18 +25,14 @@ const sdk = new NodeSDK({
             exporter: new OTLPMetricExporter({
                 url: process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT || 'http://localhost:4318/v1/metrics',
             }),
-            exportIntervalMillis: 15_000,
+            exportIntervalMillis: 10000,
         }),
     ],
     logRecordProcessors: [
         new SimpleLogRecordProcessor(new ConsoleLogRecordExporter()),
     ],
     instrumentations: [
-        getNodeAutoInstrumentations({
-            '@opentelemetry/instrumentation-winston': {
-                disableLogSending: true,
-            },
-        }),
+        getNodeAutoInstrumentations(),
     ],
 });
 

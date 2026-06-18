@@ -1,23 +1,22 @@
-name: Docker Build and Push
+name: Auth CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main, develop]
+    paths: ['Auth-Service/**']
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
+    paths: ['Auth-Service/**']
 
 jobs:
+  ci:
+    uses: ./.github/workflows/service-ci.yaml
+    with:
+      service: Auth-Service
+
   build-and-push:
+    needs: ci
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - service: Auth-Service
-            image: auth-service-monitoring
-          - service: Item-Service
-            image: item-service-monitoring
-          - service: Order-Service
-            image: order-service-monitoring
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -35,13 +34,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Build and push ${{ matrix.image }}
+      - name: Build and push auth-service-monitoring
         uses: docker/build-push-action@v7
         with:
-          context: ./${{ matrix.service }}
+          context: ./Auth-Service
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/auth-service-monitoring:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/auth-service-monitoring:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

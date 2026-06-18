@@ -5,6 +5,7 @@ import logger from '../logger/index.js';
 import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
 import type { AuthenticatedRequest } from '../utils/types.js';
 import { trace } from '@opentelemetry/api';
+import { validationErrorCounter } from '../utils/metrics.js';
 
 const span = trace.getActiveSpan();
 const spanCtx = span?.spanContext();
@@ -15,6 +16,9 @@ export const register = async (req: Request, res: Response) => {
     const existingUser = await authService.findByEmailOrUsername(validatedData.email, validatedData.username);
 
     if (existingUser) {
+      validationErrorCounter.add(1, {
+        error_type: 'user_exists',
+      });
       return res.status(400).json({
         message: "User already exists",
         error: "A user with this email or username already exists"
@@ -24,6 +28,9 @@ export const register = async (req: Request, res: Response) => {
     const user = await authService.register(validatedData);
 
     if (!user?._id) {
+      validationErrorCounter.add(1, {
+        error_type: 'failed_to_register',
+      });
       return res.status(400).json({
         message: "Registration failed",
         error: "Failed to register user"
@@ -68,6 +75,10 @@ export const login = async (req: Request, res: Response) => {
     const user = await authService.findByEmail(email);
 
     if (!user || !(await user.comparePassword(password))) {
+      validationErrorCounter.add(1, {
+        error_type: 'invalid_credentials',
+      });
+
       return res.status(401).json({
         message: "Login failed",
         error: "Invalid credentials"
