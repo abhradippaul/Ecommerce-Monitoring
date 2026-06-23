@@ -22,7 +22,7 @@ jobs:
   # 4. IaC SECURITY SCAN (Terraform / Kubernetes manifests)
   # ---------------------------------------------------------------------
   terraform-validate:
-    name: Infrastructure as Code Security Scan
+    name: Terraform Validate
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -46,10 +46,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
           role-session-name: github-actions-terraform-validation
           aws-region: ${{ env.AWS_REGION }}
-      # Hello from AWS: WhoAmI
-      - name: Sts GetCallerIdentity
-        run: |
-          aws sts get-caller-identity
 
       - name: Terraform Init
         run: terraform init
@@ -59,6 +55,7 @@ jobs:
         run: terraform validate
 
   security-scanning:
+    name: Security Scanning
     needs: terraform-validate
     runs-on: ubuntu-latest
     defaults:
@@ -71,7 +68,7 @@ jobs:
       - name: Run Checkov (Terraform + K8s)
         uses: bridgecrewio/checkov-action@master
         with:
-          directory: .
+          directory: ./Terraform
           framework: terraform
           output_format: sarif
           output_file_path: checkov-results.sarif
@@ -83,18 +80,19 @@ jobs:
           sarif_file: tfsec-results.sarif
  
       - name: Upload Checkov SARIF
-        uses: github/codeql-action/upload-sarif@v1
+        uses: github/codeql-action/upload-sarif@v4
         if: success() || failure()
         with:
           sarif_file: checkov-results.sarif
  
       - name: Upload tfsec SARIF
-        uses: github/codeql-action/upload-sarif@v1
+        uses: github/codeql-action/upload-sarif@v4
         if: success() || failure()
         with:
           sarif_file: tfsec-results.sarif
 
   terraform-plan:
+    name: Terraform Plan
     needs: security-scanning
     runs-on: ubuntu-latest
     defaults:
