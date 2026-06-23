@@ -1,15 +1,11 @@
-output "iam_user_arn" {
-  value       = module.iam_user.iam_user_arn
-  description = "IAM User ARN"
+output "aws_iam_openid_connect_provider_arn" {
+  value = module.github_oidc.aws_iam_openid_connect_provider_arn
 }
 
-output "iam_user_access_key" {
-  value       = module.iam_user.iam_user_access_key_id
-  description = "IAM User Access Key"
+output "aws_iam_role_name" {
+  value = module.github_oidc.aws_iam_role_name
 }
 
-output "iam_user_secret_key" {
-  value       = module.iam_user.iam_user_secret_key
-  description = "IAM User Secret Key"
-  sensitive   = true
+output "aws_iam_policy_name" {
+  value = module.github_oidc.aws_iam_policy_name
 }

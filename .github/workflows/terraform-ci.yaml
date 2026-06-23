@@ -3,14 +3,19 @@ name: Terraform CI
 on:
   push:
     branches: [main, develop]
-    paths: ['Terraform/**', ".github/workflows/terraform-ci.yaml"]
+    paths: ["Terraform/**", ".github/workflows/terraform-ci.yaml"]
   pull_request:
     branches: [main]
-    paths: ['Terraform/**', ".github/workflows/terraform-ci.yaml"]
+    paths: ["Terraform/**", ".github/workflows/terraform-ci.yaml"]
 
 env:
   TF_VERSION: 1.15.6
   TFC_ORG: ecom
+  AWS_REGION: ap-south-1
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read
 
 jobs:
   # ---------------------------------------------------------------------
@@ -34,6 +39,17 @@ jobs:
       - name: Terraform Format
         id: fmt
         run: terraform fmt -check
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v6.2.0
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_OPENID_CONNECT_PROVIDER_ARN }}
+          role-session-name: ${{ secrets.AWS_IAM_ROLE_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
+      # Hello from AWS: WhoAmI
+      - name: Sts GetCallerIdentity
+        run: |
+          aws sts get-caller-identity
 
       - name: Terraform Init
         run: terraform init
@@ -78,32 +94,39 @@ jobs:
         with:
           sarif_file: tfsec-results.sarif
 
-  # terraform-plan:
-  #   needs: security-scanning
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: ./Terraform
-  #   steps:
+  terraform-plan:
+    needs: security-scanning
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./Terraform
+    steps:
     
-  #   # Terraform Cloud Authentication
-  #     - name: Checkout
-  #       uses: actions/checkout@v7.0.0
+    # Terraform Cloud Authentication
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
 
-  #     - name: Setup Terraform
-  #       uses: hashicorp/setup-terraform@v4
-  #       with:
-  #         terraform_version: ${{ env.TF_VERSION }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
 
-  #     - name: Terraform Init
-  #       run: terraform init
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6.2.0
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_OPENID_CONNECT_PROVIDER_ARN }}
+          role-session-name: ${{ secrets.AWS_IAM_ROLE_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
 
-  #     - name: Terraform Plan
-  #       run: terraform plan -out=tfplan
-  #       continue-on-error: true
+      - name: Terraform Init
+        run: terraform init
 
-  #     - name: Upload TF Plan
-  #       uses: actions/upload-artifact@v7.0.1
-  #       with:
-  #         name: tfplan
-  #         path: tfplan
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+        continue-on-error: true
+
+      - name: Upload TF Plan
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: tfplan
+          path: tfplan
