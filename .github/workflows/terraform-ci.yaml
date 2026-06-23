@@ -43,8 +43,8 @@ jobs:
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v6.2.0
         with:
-          role-to-assume: ${{ secrets.AWS_IAM_OPENID_CONNECT_PROVIDER_ARN }}
-          role-session-name: ${{ secrets.AWS_IAM_ROLE_NAME }}
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: github-actions-terraform-validation
           aws-region: ${{ env.AWS_REGION }}
       # Hello from AWS: WhoAmI
       - name: Sts GetCallerIdentity
@@ -114,8 +114,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6.2.0
         with:
-          role-to-assume: ${{ secrets.AWS_IAM_OPENID_CONNECT_PROVIDER_ARN }}
-          role-session-name: ${{ secrets.AWS_IAM_ROLE_NAME }}
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: github-actions-terraform-plan
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform Init
