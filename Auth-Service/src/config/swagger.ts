@@ -30,7 +30,12 @@ const options: swaggerJSDoc.Options = {
             username: { type: 'string', example: 'testbuyer', minLength: 3, maxLength: 20 },
             email: { type: 'string', format: 'email', example: 'testbuyer@example.com' },
             password: { type: 'string', example: 'password123', minLength: 6 },
-            role: { type: 'string', enum: ['admin', 'seller', 'buyer'], default: 'buyer', example: 'buyer' },
+            role: {
+              type: 'string',
+              enum: ['admin', 'seller', 'buyer'],
+              default: 'buyer',
+              example: 'buyer',
+            },
           },
         },
         UserLoginInput: {

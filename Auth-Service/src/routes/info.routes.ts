@@ -1,11 +1,11 @@
 import express, { type Router } from 'express';
 import { getInfo } from '../controllers/info.controller.js';
 
-const router:Router = express.Router();
+const router: Router = express.Router();
 
 /**
  * @openapi
- * /info:
+ * /auth/info:
  *   get:
  *     summary: Get service info
  *     description: Returns metadata about the service such as service name, version, and current uptime.

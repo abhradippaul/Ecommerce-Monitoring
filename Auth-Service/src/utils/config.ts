@@ -16,8 +16,11 @@ export const config = {
   accessTokenExpiry: process.env.ACCESS_TOKEN_EXPIRY || '',
   refreshTokenExpiry: process.env.REFRESH_TOKEN_EXPIRY || '',
   jwtSecret: process.env.JWT_SECRET || '',
+  otelCollectorEndpoint: process.env.OTEL_COLLECTOR_ENDPOINT || 'localhost:4318',
+  serviceName: process.env.SERVICE_NAME || 'auth-service',
+  serviceVersion: process.env.SERVICE_VERSION || '1.0.0',
   metrics: {
     httpRequestDurationName: 'http_request_duration_seconds',
     httpRequestDurationHelp: 'Duration of HTTP requests in seconds',
-  }
+  },
 };

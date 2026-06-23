@@ -1,5 +1,5 @@
 import app from './app.js';
-import logger from './logger/index.js';
+import logger from './utils/logger.js';
 import { config } from './utils/config.js';
 import { connectDB } from './config/db.js';
 import { getSecretValue } from './utils/aws-secret.js';
@@ -15,9 +15,10 @@ const startServer = async () => {
 
     // 3. Finally start the server
     app.listen(config.port, () => {
-      logger.info(`Auth Service is running in ${config.nodeEnv} environment on http://localhost:${config.port}`);
+      logger.info(
+        `Auth Service is running in ${config.nodeEnv} environment on http://localhost:${config.port}`
+      );
     });
-
   } catch (error) {
     logger.error('Failed to start server:', error);
     process.exit(1); // Exit if Vault or DB fails

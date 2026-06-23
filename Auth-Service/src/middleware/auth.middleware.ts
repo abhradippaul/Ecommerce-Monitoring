@@ -1,5 +1,5 @@
 import type { Response, NextFunction } from 'express';
-import logger from '../logger/index.js';
+import logger from '../utils/logger.js';
 import { verifyAccessToken } from '../utils/token.js';
 import type { AuthenticatedRequest, UserRole } from '../utils/types.js';
 
@@ -9,8 +9,8 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
 
   if (!token) {
     return res.status(401).json({
-      message: "Access token missing",
-      error: "Authentication required"
+      message: 'Access token missing',
+      error: 'Authentication required',
     });
   }
 
@@ -20,8 +20,8 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
   } catch (error: any) {
     logger.error('JWT validation failed: ' + error.message);
     return res.status(403).json({
-      message: "Invalid or expired token",
-      error: error.message
+      message: 'Invalid or expired token',
+      error: error.message,
     });
   }
 };
@@ -31,15 +31,15 @@ export const requireRole = (allowedRoles: UserRole[]) => {
     const authUser = req.user;
     if (!authUser) {
       return res.status(401).json({
-        message: "Unauthorized",
-        error: "User is not authenticated"
+        message: 'Unauthorized',
+        error: 'User is not authenticated',
       });
     }
 
     if (!allowedRoles.includes(authUser.role)) {
       return res.status(403).json({
-        message: "Forbidden",
-        error: "Insufficient permissions for this resource"
+        message: 'Forbidden',
+        error: 'Insufficient permissions for this resource',
       });
     }
 

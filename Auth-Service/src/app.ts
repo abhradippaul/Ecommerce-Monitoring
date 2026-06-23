@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction, Express } from 'express';
 import healthRoutes from './routes/health.routes.js';
 import infoRoutes from './routes/info.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import profileRoutes from './routes/profile.routes.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger.js';
 import logger from './utils/logger.js';
@@ -12,15 +13,16 @@ const app: Express = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/auth/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.use('/health', healthRoutes);
-app.use('/info', infoRoutes);
+app.use('/auth/health', healthRoutes);
+app.use('/auth/info', infoRoutes);
+app.use('/auth/profile', profileRoutes);
 app.use('/auth', authRoutes);
 
 /**
  * @openapi
- * /slow:
+ * /auth/slow:
  *   get:
  *     summary: Simulate a slow request
  *     description: Delays the response by a given duration (in milliseconds) to simulate high latency or slow network conditions.
@@ -48,18 +50,18 @@ app.use('/auth', authRoutes);
  *                   type: integer
  *                   example: 3000
  */
-app.get('/slow', async (req: Request, res: Response) => {
+app.get('/auth/slow', async (req: Request, res: Response) => {
   const start = Date.now();
   const duration = parseInt(req.query.duration as string) || 3000;
-  await new Promise((resolve) => setTimeout(resolve, duration));
-  requestCounter.add(1, { route: '/slow' });
-  latencyHistogram.record(Date.now() - start, { route: '/slow' });
-  logger.info(`Slow request completed in ${duration}ms`, { route: '/slow', duration });
+  await new Promise(resolve => setTimeout(resolve, duration));
+  requestCounter.add(1, { route: '/auth/slow' });
+  latencyHistogram.record(Date.now() - start, { route: '/auth/slow' });
+  logger.info(`Slow request completed in ${duration}ms`, { route: '/auth/slow', duration });
   return res.json({ status: 'slow', duration });
 });
 
 // Error handling middleware
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   requestCounter.add(1, { route: '/error' });
   res.status(500).json({ error: 'Internal Server Error' });
 });

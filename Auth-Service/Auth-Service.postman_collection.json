@@ -33,12 +33,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/health",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "health"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
             }
           }
         }
@@ -54,12 +50,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/info",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "info"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["info"]
             }
           }
         }
@@ -106,13 +98,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/register",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "register"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
             }
           }
         },
@@ -151,13 +138,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "login"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
             }
           }
         },
@@ -168,13 +150,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/logout",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "logout"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
             }
           }
         },
@@ -209,14 +186,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/user/{{userId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "user",
-                "{{userId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "user", "{{userId}}"]
             }
           }
         },
@@ -237,14 +208,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/user/{{userId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "user",
-                "{{userId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "user", "{{userId}}"]
             }
           }
         },
@@ -265,13 +230,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/profile",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "profile"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "profile"]
             }
           }
         },
@@ -292,13 +252,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/admin-only",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "admin-only"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "admin-only"]
             }
           }
         },
@@ -319,13 +274,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/seller-only",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "seller-only"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "seller-only"]
             }
           }
         },
@@ -346,13 +296,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/buyer-only",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "buyer-only"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "buyer-only"]
             }
           }
         }
@@ -368,12 +313,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/slow?duration=3000",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "slow"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["slow"],
               "query": [
                 {
                   "key": "duration",
@@ -390,12 +331,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/metrics",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "metrics"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["metrics"]
             }
           }
         }

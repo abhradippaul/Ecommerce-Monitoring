@@ -1,225 +1,418 @@
 import type { Request, Response } from 'express';
 import { authService } from '../services/auth.service.js';
 import { registerSchema, loginSchema, updateUserSchema } from '../schemas/user.schema.js';
-import logger from '../logger/index.js';
+import logger from '../utils/logger.js';
 import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
 import type { AuthenticatedRequest } from '../utils/types.js';
-import { trace } from '@opentelemetry/api';
-import { validationErrorCounter } from '../utils/metrics.js';
-
-const span = trace.getActiveSpan();
-const spanCtx = span?.spanContext();
+import { latencyHistogram, requestCounter, validationErrorCounter } from '../utils/metrics.js';
+import { withSpan } from '../utils/traces.js';
+import { HttpError } from '../utils/error.js';
 
 export const register = async (req: Request, res: Response) => {
-  try {
-    const validatedData = registerSchema.parse(req.body);
-    const existingUser = await authService.findByEmailOrUsername(validatedData.email, validatedData.username);
+  const start = Date.now();
+  const route = req.route ? `${req.baseUrl}${req.route.path}` : req.originalUrl;
+  const httpMethod = req.method;
+  requestCounter.add(1, { route, http_method: httpMethod });
 
-    if (existingUser) {
-      validationErrorCounter.add(1, {
-        error_type: 'user_exists',
+  await withSpan('register', async span => {
+    const traceId = span.spanContext().traceId;
+
+    try {
+      const validatedData = await withSpan('register.schemaValidation', async () => {
+        const result = registerSchema.safeParse(req.body);
+        if (!result.success) {
+          validationErrorCounter.add(1, { error_type: 'schema' });
+          throw new HttpError(400, result.error.message, 'schema_validation');
+        }
+        return result.data;
       });
-      return res.status(400).json({
-        message: "User already exists",
-        error: "A user with this email or username already exists"
+
+      const existingUser = await withSpan('register.checkExistingUser', () =>
+        authService.findByEmailOrUsername(validatedData.email, validatedData.username)
+      );
+
+      if (existingUser) {
+        validationErrorCounter.add(1, { error_type: 'user_exists' });
+        throw new HttpError(400, 'User already exists', 'user_exists');
+      }
+
+      const user = await withSpan('register.createUser', () => authService.register(validatedData));
+
+      if (!user?._id) {
+        validationErrorCounter.add(1, { error_type: 'failed_to_register' });
+        throw new HttpError(400, 'Registration failed', 'failed_to_register');
+      }
+
+      logger.info('User registered', {
+        user_id: user._id,
+        trace_id: traceId,
+        route,
+        http_status_code: 201,
+        duration_ms: Date.now() - start,
+      });
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'success',
+      });
+
+      return res.status(201).json({
+        message: 'Successfully registered user',
+        data: {
+          user_id: user._id,
+          role: user.role,
+          email: user.email,
+          username: user.username,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        },
+      });
+    } catch (err: any) {
+      const statusCode = err instanceof HttpError ? err.statusCode : 500;
+      const logPayload = {
+        reason: err.errorType ?? 'unexpected',
+        trace_id: traceId,
+        route,
+        http_status_code: statusCode,
+        duration_ms: Date.now() - start,
+      };
+
+      if (statusCode >= 500) {
+        logger.error('User registration failed', logPayload);
+      } else {
+        logger.warn('User registration failed', logPayload);
+      }
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'error',
+      });
+
+      return res.status(statusCode).json({
+        message: 'Registration failed',
+        error: err.message,
       });
     }
-
-    const user = await authService.register(validatedData);
-
-    if (!user?._id) {
-      validationErrorCounter.add(1, {
-        error_type: 'failed_to_register',
-      });
-      return res.status(400).json({
-        message: "Registration failed",
-        error: "Failed to register user"
-      });
-    }
-
-    logger.info('User registered', {
-      trace_id: spanCtx?.traceId,
-      span_id: spanCtx?.spanId,
-      user_id: user._id,
-      http_method: 'POST',
-      http_route: '/api/auth/register',
-      http_status_code: 201,
-      duration_ms: 245
-    });
-
-    return res.status(201).json({
-      message: "Successfully registered user",
-      data: user
-    });
-  } catch (error: any) {
-    logger.error('User registration failed', {
-      trace_id: spanCtx?.traceId,
-      span_id: spanCtx?.spanId,
-      user_id: '0',
-      http_method: 'POST',
-      http_route: '/api/auth/register',
-      http_status_code: 500,
-      duration_ms: 245
-    });
-
-    return res.status(500).json({
-      message: "Registration failed",
-      error: error.message
-    });
-  }
+  });
 };
 
 export const login = async (req: Request, res: Response) => {
-  try {
-    const { email, password } = loginSchema.parse(req.body);
-    const user = await authService.findByEmail(email);
+  const start = Date.now();
+  const route = req.route ? `${req.baseUrl}${req.route.path}` : req.originalUrl;
+  const httpMethod = req.method;
+  requestCounter.add(1, { route, http_method: httpMethod });
 
-    if (!user || !(await user.comparePassword(password))) {
-      validationErrorCounter.add(1, {
-        error_type: 'invalid_credentials',
+  await withSpan('login', async span => {
+    const traceId = span.spanContext().traceId;
+
+    try {
+      const validatedData = await withSpan('login.schemaValidation', async () => {
+        const result = loginSchema.safeParse(req.body);
+        if (!result.success) {
+          validationErrorCounter.add(1, { error_type: 'schema' });
+          throw new HttpError(400, 'Invalid login payload', 'schema_validation');
+        }
+        return result.data;
       });
 
-      return res.status(401).json({
-        message: "Login failed",
-        error: "Invalid credentials"
-      });
-    }
+      const user = await withSpan('login.fetchUser', () =>
+        authService.findByEmail(validatedData.email)
+      );
 
-    const userDetails = {
-      id: user._id,
-      role: user.role
-    }
-    const access_token = generateAccessToken(userDetails);
-    const refresh_token = generateRefreshToken(userDetails);
-
-    res.cookie('access_token', access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 15 * 60 * 1000 // 15 minutes
-    });
-
-    res.cookie('refresh_token', refresh_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
-
-    logger.info(`User logged in: ${user.username}`);
-    return res.status(200).json({
-      message: "Login successful",
-      data: {
-        access_token,
-        refresh_token
+      if (!user) {
+        validationErrorCounter.add(1, { error_type: 'user_not_found' });
+        throw new HttpError(401, 'Invalid credentials', 'user_not_found');
       }
-    });
-  } catch (error: any) {
-    logger.error(`Login error: ${error.message}`);
-    return res.status(400).json({
-      message: "Login error",
-      error: error.message
-    });
-  }
+
+      await withSpan('login.passwordValidation', async () => {
+        const valid = await user.comparePassword(validatedData.password);
+        if (!valid) {
+          validationErrorCounter.add(1, { error_type: 'invalid_credentials' });
+          throw new HttpError(401, 'Invalid credentials', 'invalid_credentials');
+        }
+      });
+
+      const userDetails = {
+        id: user._id,
+        role: user.role,
+      };
+      const access_token = generateAccessToken(userDetails);
+      const refresh_token = generateRefreshToken(userDetails);
+
+      res.cookie('access_token', access_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 15 * 60 * 1000, // 15 minutes
+      });
+
+      res.cookie('refresh_token', refresh_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      logger.info('User logged in', {
+        user_id: user._id,
+        trace_id: traceId,
+        route,
+        http_status_code: 200,
+        duration_ms: Date.now() - start,
+      });
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'success',
+      });
+      return res.status(200).json({
+        message: 'Login successful',
+        data: {
+          access_token,
+          refresh_token,
+        },
+      });
+    } catch (err: any) {
+      const statusCode = err instanceof HttpError ? err.statusCode : 500;
+      const logPayload = {
+        reason: err.errorType ?? 'unexpected',
+        trace_id: traceId,
+        route,
+        http_status_code: statusCode,
+        duration_ms: Date.now() - start,
+      };
+
+      if (statusCode >= 500) {
+        logger.error('Login failed', logPayload);
+      } else {
+        logger.warn('Login failed', logPayload);
+      }
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'error',
+      });
+
+      return res.status(statusCode).json({ message: 'Login failed', error: err.message });
+    }
+  });
 };
 
 export const logout = async (req: Request, res: Response) => {
-  logger.info('User logged out');
-  return res.status(200).json({
-    message: "Logged out successfully"
+  const start = Date.now();
+  const route = req.route ? `${req.baseUrl}${req.route.path}` : req.originalUrl;
+  const httpMethod = req.method;
+  requestCounter.add(1, { route, http_method: httpMethod });
+
+  await withSpan('logout', async span => {
+    const traceId = span.spanContext().traceId;
+    try {
+      logger.info('User logged out', {
+        trace_id: traceId,
+        route,
+        http_status_code: 200,
+        duration_ms: Date.now() - start,
+      });
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'success',
+      });
+
+      return res.status(200).json({
+        message: 'Logged out successfully',
+      });
+    } catch (err: any) {
+      const statusCode = err instanceof HttpError ? err.statusCode : 500;
+      const logPayload = {
+        reason: err.errorType ?? 'unexpected',
+        trace_id: traceId,
+        route,
+        http_status_code: statusCode,
+        duration_ms: Date.now() - start,
+      };
+
+      if (statusCode >= 500) {
+        logger.error('Logout failed', logPayload);
+      } else {
+        logger.warn('Logout failed', logPayload);
+      }
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'error',
+      });
+      res.status(statusCode).json({ message: 'Logout failed', error: err.message });
+    }
   });
 };
 
 export const updateUser = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    if (!id) {
-      return res.status(400).json({
-        message: "Update failed",
-        error: "ID is required"
+  const start = Date.now();
+  const route = req.route ? `${req.baseUrl}${req.route.path}` : req.originalUrl;
+  const httpMethod = req.method;
+  requestCounter.add(1, { route, http_method: httpMethod });
+
+  await withSpan('updateUser', async span => {
+    const traceId = span.spanContext().traceId;
+
+    try {
+      const { id } = req.params;
+      if (!id) {
+        validationErrorCounter.add(1, { error_type: 'missing_id' });
+        throw new HttpError(400, 'ID is required', 'missing_id');
+      }
+
+      const authUser = (req as AuthenticatedRequest).user;
+      if (!authUser) {
+        validationErrorCounter.add(1, { error_type: 'unauthorized' });
+        throw new HttpError(401, 'Unauthorized: Missing authentication context', 'unauthorized');
+      }
+
+      if (authUser.role !== 'admin' && authUser.userId !== id) {
+        validationErrorCounter.add(1, { error_type: 'forbidden' });
+        throw new HttpError(403, 'Forbidden: You can only update your own account', 'forbidden');
+      }
+
+      const validatedData = await withSpan('updateUser.schemaValidation', async () => {
+        const result = updateUserSchema.safeParse(req.body);
+        if (!result.success) {
+          validationErrorCounter.add(1, { error_type: 'schema' });
+          throw new HttpError(400, result.error.message, 'schema_validation');
+        }
+        return result.data;
+      });
+
+      const user = await withSpan('updateUser.update', () =>
+        authService.update(id as string, validatedData)
+      );
+
+      if (!user) {
+        validationErrorCounter.add(1, { error_type: 'user_not_found' });
+        throw new HttpError(404, 'User not found', 'user_not_found');
+      }
+
+      logger.info(`User updated: ${user.username}`, {
+        user_id: user._id,
+        trace_id: traceId,
+        route,
+        http_status_code: 200,
+        duration_ms: Date.now() - start,
+      });
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'success',
+      });
+
+      return res.status(200).json({
+        message: 'User updated successfully',
+        data: user,
+      });
+    } catch (err: any) {
+      const statusCode = err instanceof HttpError ? err.statusCode : 400;
+      const logPayload = {
+        reason: err.errorType ?? 'unexpected',
+        trace_id: traceId,
+        route,
+        http_status_code: statusCode,
+        duration_ms: Date.now() - start,
+      };
+
+      if (statusCode >= 500) {
+        logger.error(`Update error: ${err.message}`, logPayload);
+      } else {
+        logger.warn(`Update error: ${err.message}`, logPayload);
+      }
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'error',
+      });
+
+      return res.status(statusCode).json({
+        message: 'Update failed',
+        error: err.message,
       });
     }
-
-    const authUser = (req as AuthenticatedRequest).user;
-    if (!authUser) {
-      return res.status(401).json({
-        message: "Update failed",
-        error: "Unauthorized: Missing authentication context"
-      });
-    }
-
-    if (authUser.role !== 'admin' && authUser.userId !== id) {
-      return res.status(403).json({
-        message: "Update failed",
-        error: "Forbidden: You can only update your own account"
-      });
-    }
-
-    const validatedData = updateUserSchema.parse(req.body);
-
-    const user = await authService.update(id as string, validatedData);
-    if (!user) {
-      return res.status(404).json({
-        message: "Update failed",
-        error: "User not found"
-      });
-    }
-
-    logger.info(`User updated: ${user.username}`);
-    return res.status(200).json({
-      message: "User updated successfully",
-      data: user
-    });
-  } catch (error: any) {
-    logger.error(`Update error: ${error.message}`);
-    return res.status(400).json({
-      message: "Update failed",
-      error: error.message
-    });
-  }
+  });
 };
 
 export const deleteUser = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    if (!id) {
-      return res.status(400).json({
-        message: "Delete failed",
-        error: "ID is required"
-      });
-    }
+  const start = Date.now();
+  const route = req.route ? `${req.baseUrl}${req.route.path}` : req.originalUrl;
+  const httpMethod = req.method;
+  requestCounter.add(1, { route, http_method: httpMethod });
 
-    const authUser = (req as AuthenticatedRequest).user;
-    if (!authUser) {
-      return res.status(401).json({
-        message: "Delete failed",
-        error: "Unauthorized: Missing authentication context"
-      });
-    }
+  await withSpan('deleteUser', async span => {
+    const traceId = span.spanContext().traceId;
 
-    if (authUser.role !== 'admin' && authUser.userId !== id) {
-      return res.status(403).json({
-        message: "Delete failed",
-        error: "Forbidden: You can only delete your own account"
-      });
-    }
+    try {
+      const { id } = req.params;
+      if (!id) {
+        validationErrorCounter.add(1, { error_type: 'missing_id' });
+        throw new HttpError(400, 'ID is required', 'missing_id');
+      }
 
-    const deleted = await authService.delete(id as string);
-    if (!deleted) {
-      return res.status(404).json({
-        message: "Delete failed",
-        error: "User not found"
+      const authUser = (req as AuthenticatedRequest).user;
+      if (!authUser) {
+        validationErrorCounter.add(1, { error_type: 'unauthorized' });
+        throw new HttpError(401, 'Unauthorized: Missing authentication context', 'unauthorized');
+      }
+
+      if (authUser.role !== 'admin' && authUser.userId !== id) {
+        validationErrorCounter.add(1, { error_type: 'forbidden' });
+        throw new HttpError(403, 'Forbidden: You can only delete your own account', 'forbidden');
+      }
+
+      const deleted = await withSpan('deleteUser.delete', () => authService.delete(id as string));
+
+      if (!deleted) {
+        validationErrorCounter.add(1, { error_type: 'user_not_found' });
+        throw new HttpError(404, 'User not found', 'user_not_found');
+      }
+
+      logger.info(`User deleted: ${id}`, {
+        user_id: id,
+        trace_id: traceId,
+        route,
+        http_status_code: 200,
+        duration_ms: Date.now() - start,
+      });
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'success',
+      });
+
+      return res.status(200).json({
+        message: 'User deleted successfully',
+      });
+    } catch (err: any) {
+      const statusCode = err instanceof HttpError ? err.statusCode : 400;
+      const logPayload = {
+        reason: err.errorType ?? 'unexpected',
+        trace_id: traceId,
+        route,
+        http_status_code: statusCode,
+        duration_ms: Date.now() - start,
+      };
+
+      if (statusCode >= 500) {
+        logger.error(`Delete error: ${err.message}`, logPayload);
+      } else {
+        logger.warn(`Delete error: ${err.message}`, logPayload);
+      }
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'error',
+      });
+
+      return res.status(statusCode).json({
+        message: 'Delete failed',
+        error: err.message,
       });
     }
-    logger.info(`User deleted: ${id}`);
-    return res.status(200).json({
-      message: "User deleted successfully"
-    });
-  } catch (error: any) {
-    logger.error(`Delete error: ${error.message}`);
-    return res.status(400).json({
-      message: "Delete failed",
-      error: error.message
-    });
-  }
+  });
 };

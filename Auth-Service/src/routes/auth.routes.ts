@@ -215,50 +215,6 @@ router.delete('/user/:id', authenticateToken, deleteUser);
 
 /**
  * @openapi
- * /auth/profile:
- *   get:
- *     summary: Get user profile
- *     description: Retrieves the profile details of the currently authenticated user.
- *     tags:
- *       - Auth
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Profile retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Profile retrieved successfully
- *                 data:
- *                   type: object
- *                   properties:
- *                     userId:
- *                       type: string
- *                       example: 60c72b2f9b1d8b2a3c8e4d56
- *                     role:
- *                       type: string
- *                       example: buyer
- *       401:
- *         description: Unauthorized
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/GenericResponse'
- */
-router.get('/profile', authenticateToken, (req, res) => {
-  res.status(200).json({
-    message: "Profile retrieved successfully",
-    data: (req as AuthenticatedRequest).user
-  });
-});
-
-/**
- * @openapi
  * /auth/admin-only:
  *   get:
  *     summary: Admin test endpoint
@@ -289,8 +245,8 @@ router.get('/profile', authenticateToken, (req, res) => {
  */
 router.get('/admin-only', authenticateToken, requireRole(['admin']), (req, res) => {
   res.status(200).json({
-    message: "Welcome, admin! Access granted.",
-    data: (req as AuthenticatedRequest).user
+    message: 'Welcome, admin! Access granted.',
+    data: (req as AuthenticatedRequest).user,
   });
 });
 
@@ -326,8 +282,8 @@ router.get('/admin-only', authenticateToken, requireRole(['admin']), (req, res) 
  */
 router.get('/seller-only', authenticateToken, requireRole(['seller']), (req, res) => {
   res.status(200).json({
-    message: "Welcome, seller! Access granted.",
-    data: (req as AuthenticatedRequest).user
+    message: 'Welcome, seller! Access granted.',
+    data: (req as AuthenticatedRequest).user,
   });
 });
 
@@ -363,8 +319,8 @@ router.get('/seller-only', authenticateToken, requireRole(['seller']), (req, res
  */
 router.get('/buyer-only', authenticateToken, requireRole(['buyer']), (req, res) => {
   res.status(200).json({
-    message: "Welcome, buyer! Access granted.",
-    data: (req as AuthenticatedRequest).user
+    message: 'Welcome, buyer! Access granted.',
+    data: (req as AuthenticatedRequest).user,
   });
 });
 
