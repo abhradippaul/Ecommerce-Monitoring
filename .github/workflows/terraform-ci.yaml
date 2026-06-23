@@ -12,7 +12,7 @@ env:
   TF_VERSION: 1.15.6
   TFC_ORG: ecom
   AWS_REGION: ap-south-1
-  TF_PLUGIN_CACHE_DIR: $HOME/.terraform.d/plugin-cache
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
 
 permissions:
   id-token: write # This is required for requesting the JWT
@@ -37,7 +37,7 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
         
-      - run: mkdir -p "$HOME/.terraform.d/plugin-cache"
+      - run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
 
       - name: Terraform Format
         id: fmt
@@ -52,7 +52,7 @@ jobs:
 
       - uses: actions/cache@v6.0.0
         with:
-          path: ~/.terraform.d/plugin-cache
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
           key: ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
           restore-keys: |
             ${{ runner.os }}-terraform-
@@ -122,7 +122,7 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
-      - run: mkdir -p "$HOME/.terraform.d/plugin-cache"
+      - run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6.2.0
@@ -133,7 +133,7 @@ jobs:
 
       - uses: actions/cache@v6.0.0
         with:
-          path: ~/.terraform.d/plugin-cache
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
           key: ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
           restore-keys: |
             ${{ runner.os }}-terraform-
