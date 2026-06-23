@@ -58,20 +58,15 @@ resource "aws_iam_policy" "github_actions_ecom_policy" {
         ]
         Resource = "*"
       },
-      #   {
-      #     Effect = "Allow"
-      #     Action = [
-      #       "ecr:GetAuthorizationToken",
-      #       "ecr:BatchCheckLayerAvailability",
-      #       "ecr:GetDownloadUrlForLayer",
-      #       "ecr:BatchGetImage",
-      #       "ecr:InitiateLayerUpload",
-      #       "ecr:UploadLayerPart",
-      #       "ecr:CompleteLayerUpload",
-      #       "ecr:PutImage"
-      #     ]
-      #     Resource = "*"
-      #   }
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+        ]
+        Resource = "arn:aws:s3:::abhradip-terraform-state-bucket/*"
+      }
     ]
   })
 

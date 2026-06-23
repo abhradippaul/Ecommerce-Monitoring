@@ -83,7 +83,7 @@ jobs:
           sarif_file: tfsec-results.sarif
  
       - name: Upload Checkov SARIF
-        uses: ggithub/codeql-action/upload-sarif@v1
+        uses: github/codeql-action/upload-sarif@v1
         if: success() || failure()
         with:
           sarif_file: checkov-results.sarif
