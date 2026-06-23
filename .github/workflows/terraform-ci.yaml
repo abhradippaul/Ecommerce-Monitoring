@@ -22,7 +22,7 @@ jobs:
   # 4. IaC SECURITY SCAN (Terraform / Kubernetes manifests)
   # ---------------------------------------------------------------------
   terraform-validate:
-    name: Terraform Validate
+    name: Validate
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -58,6 +58,8 @@ jobs:
     name: Security Scanning
     needs: terraform-validate
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
     defaults:
       run:
         working-directory: ./Terraform

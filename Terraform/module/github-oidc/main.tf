@@ -54,13 +54,6 @@ resource "aws_iam_policy" "github_actions_ecom_policy" {
       {
         Effect = "Allow"
         Action = [
-          "secretsmanager:*"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
           "s3:GetObject",
           "s3:PutObject",
           "s3:DeleteObject",
