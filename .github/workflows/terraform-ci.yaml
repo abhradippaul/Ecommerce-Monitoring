@@ -142,7 +142,7 @@ jobs:
         run: terraform init -upgrade
 
       - name: Terraform Plan
-        run: terraform plan -out=tfplan
+        run: terraform plan -var-file=dev.tfvars -out=tfplan
         continue-on-error: true
 
       - name: Upload TF Plan
