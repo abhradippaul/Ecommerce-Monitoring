@@ -12,6 +12,7 @@ env:
   TF_VERSION: 1.15.6
   TFC_ORG: ecom
   AWS_REGION: ap-south-1
+  TF_PLUGIN_CACHE_DIR: $HOME/.terraform.d/plugin-cache
 
 permissions:
   id-token: write # This is required for requesting the JWT
@@ -35,6 +36,8 @@ jobs:
         uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ env.TF_VERSION }}
+        
+      - run: mkdir -p "$HOME/.terraform.d/plugin-cache"
 
       - name: Terraform Format
         id: fmt
@@ -47,8 +50,15 @@ jobs:
           role-session-name: github-actions-terraform-validation
           aws-region: ${{ env.AWS_REGION }}
 
+      - uses: actions/cache@v6.0.0
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key:  ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-
+
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -upgrade
 
       - name: Terraform Validate
         id: validate
@@ -92,7 +102,7 @@ jobs:
         uses: github/codeql-action/upload-sarif@v4
         if: success() || failure()
         with:
-          sarif_file: Terraform/tfsec-results.sarif
+          sarif_file: tfsec-results.sarif
 
   terraform-plan:
     name: Terraform Plan
