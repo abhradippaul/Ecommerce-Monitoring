@@ -96,7 +96,12 @@ resource "aws_iam_policy" "github_actions_ecom_policy" {
           "iam:UntagPolicy",
           "iam:AttachRolePolicy",
           "iam:DetachRolePolicy",
-          "iam:ListAttachedRolePolicies"
+          "iam:ListAttachedRolePolicies",
+          "iam:ListRolePolicies",
+          "iam:GetRolePolicy",
+          "iam:PutRolePolicy",
+          "iam:DeleteRolePolicy",
+          "iam:ListInstanceProfilesForRole"
         ]
         Resource = [
           "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com",
