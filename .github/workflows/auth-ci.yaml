@@ -16,6 +16,10 @@ on:
     types: [completed]
     branches: [main, develop]
 
+permissions:
+  contents: read
+  security-events: write
+
 env:
   COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
