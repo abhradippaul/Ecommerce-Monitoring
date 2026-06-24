@@ -56,9 +56,53 @@ resource "aws_iam_policy" "github_actions_ecom_policy" {
         Action = [
           "s3:GetObject",
           "s3:PutObject",
-          "s3:DeleteObject",
+          "s3:DeleteObject"
         ]
         Resource = "arn:aws:s3:::abhradip-terraform-state-bucket/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = "arn:aws:s3:::abhradip-terraform-state-bucket"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:GetOpenIDConnectProvider",
+          "iam:CreateOpenIDConnectProvider",
+          "iam:DeleteOpenIDConnectProvider",
+          "iam:UpdateOpenIDConnectProviderThumbprint",
+          "iam:AddClientIDToOpenIDConnectProvider",
+          "iam:RemoveClientIDFromOpenIDConnectProvider",
+          "iam:TagOpenIDConnectProvider",
+          "iam:UntagOpenIDConnectProvider",
+          "iam:GetRole",
+          "iam:CreateRole",
+          "iam:DeleteRole",
+          "iam:UpdateRole",
+          "iam:UpdateAssumeRolePolicy",
+          "iam:TagRole",
+          "iam:UntagRole",
+          "iam:GetPolicy",
+          "iam:GetPolicyVersion",
+          "iam:CreatePolicy",
+          "iam:DeletePolicy",
+          "iam:CreatePolicyVersion",
+          "iam:DeletePolicyVersion",
+          "iam:ListPolicyVersions",
+          "iam:TagPolicy",
+          "iam:UntagPolicy",
+          "iam:AttachRolePolicy",
+          "iam:DetachRolePolicy",
+          "iam:ListAttachedRolePolicies"
+        ]
+        Resource = [
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com",
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/GitHubActionsECOMDeployRole",
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/GitHubActionsECOMPolicy"
+        ]
       }
     ]
   })
@@ -73,3 +117,5 @@ resource "aws_iam_role_policy_attachment" "github_actions_ecom_policy_attachment
   role       = aws_iam_role.github_actions_ecom_deploy_role.name
   policy_arn = aws_iam_policy.github_actions_ecom_policy.arn
 }
+
+data "aws_caller_identity" "current" {}

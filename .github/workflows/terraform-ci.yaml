@@ -41,7 +41,7 @@ jobs:
 
       - name: Terraform Format
         id: fmt
-        run: terraform fmt -check
+        run: terraform fmt -check -recursive
 
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v6.2.0
@@ -76,6 +76,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.0
+
+      - name: Run Trivy vulnerability scanner in IaC mode
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'config'
+          hide-progress: true
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-results.sarif'
  
       - name: Run Checkov (Terraform + K8s)
         uses: bridgecrewio/checkov-action@master
@@ -86,23 +102,11 @@ jobs:
           output_file_path: checkov-results.sarif
           soft_fail: false
  
-      - name: Run tfsec (Terraform-specific)
-        uses: aquasecurity/tfsec-action@v1.0.3
-        with:
-          working_directory: ./Terraform
-          additional_args: --format sarif --out tfsec-results.sarif
- 
       - name: Upload Checkov SARIF
         uses: github/codeql-action/upload-sarif@v4
-        if: success() || failure()
+        if: success()
         with:
           sarif_file: checkov-results.sarif
- 
-      - name: Upload tfsec SARIF
-        uses: github/codeql-action/upload-sarif@v4
-        if: success() || failure()
-        with:
-          sarif_file: tfsec-results.sarif
 
   terraform-plan:
     name: Terraform Plan
