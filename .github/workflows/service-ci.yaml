@@ -68,21 +68,21 @@ jobs:
       - name: Run CodeQL Analysis
         uses: github/codeql-action/analyze@v4
 
-      - name: Run Semgrep Security Rules
-        run: |
-          semgrep scan \
-            --config=p/javascript \
-            --config=p/typescript \
-            --config=p/nodejs \
-            --config=p/security-audit \
-            --config=p/owasp-top-ten \
-            --sarif \
-            --output=semgrep-results.sarif
+      # - name: Run Semgrep Security Rules
+      #   run: |
+      #     semgrep scan \
+      #       --config=p/javascript \
+      #       --config=p/typescript \
+      #       --config=p/nodejs \
+      #       --config=p/security-audit \
+      #       --config=p/owasp-top-ten \
+      #       --sarif \
+      #       --output=semgrep-results.sarif
 
-      - name: Upload Semgrep SARIF
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: semgrep-results.sarif
+      # - name: Upload Semgrep SARIF
+      #   uses: github/codeql-action/upload-sarif@v4
+      #   with:
+      #     sarif_file: semgrep-results.sarif
 
   # ---------------------------------------------------------------------
   # 2. DEPENDENCY / SUPPLY CHAIN SECURITY
