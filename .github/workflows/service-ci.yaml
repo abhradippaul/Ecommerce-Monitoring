@@ -18,8 +18,7 @@ jobs:
   lint-and-sast:
     name: Lint, Format & Static Analysis
     runs-on: ubuntu-latest
-    container:
-      image: semgrep/semgrep # Official Semgrep Docker image
+    
     defaults:
       run:
         working-directory: ${{ inputs.service }}
@@ -118,7 +117,7 @@ jobs:
           cache-dependency-path: ${{ inputs.service }}/pnpm-lock.yaml
  
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --prefer-offline
  
       - name: pnpm audit
         run: pnpm audit --audit-level=high --json

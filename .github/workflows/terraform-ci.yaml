@@ -154,3 +154,4 @@ jobs:
         with:
           name: terraform-plan
           path: Terraform/tfplan.txt
+          retention-days: 5
