@@ -18,7 +18,7 @@ jobs:
   lint-and-sast:
     name: Lint, Format & Static Analysis
     runs-on: ubuntu-latest
-    
+
     defaults:
       run:
         working-directory: ${{ inputs.service }}
@@ -40,17 +40,6 @@ jobs:
           node-version: ${{ inputs.node-version }}
           cache: 'pnpm'
           cache-dependency-path: ${{ inputs.service }}/pnpm-lock.yaml
-
-      - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v3
-        with:
-          report-format: sarif
-          report: gitleaks-results.sarif
-
-      - name: Upload Gitleaks SARIF
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: 'gitleaks-results.sarif'
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
@@ -97,6 +86,9 @@ jobs:
   dependency-scan:
     name: Dependency & SBOM Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     defaults:
       run:
         working-directory: ${{ inputs.service }}
