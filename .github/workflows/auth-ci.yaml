@@ -1,14 +1,27 @@
 name: Auth CI
 
 on:
+  push:
+    branches: [main, develop]
+    paths:
+      - ".github/workflows/auth-ci.yaml"
+      - ".github/workflows/service-ci.yaml"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/auth-ci.yaml"
+      - ".github/workflows/service-ci.yaml"
   workflow_run:
     workflows: ["Terraform CI"]
     types: [completed]
     branches: [main, develop]
 
+env:
+  COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+
 jobs:
   ci:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
     uses: ./.github/workflows/service-ci.yaml
     with:
       service: Auth-Service
@@ -20,7 +33,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7.0.0
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ env.COMMIT_SHA }}
 
       - name: Login to Docker Hub
         if: github.event_name != 'pull_request'
@@ -42,6 +55,6 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/auth-service-monitoring:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/auth-service-monitoring:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/auth-service-monitoring:${{ env.COMMIT_SHA }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
