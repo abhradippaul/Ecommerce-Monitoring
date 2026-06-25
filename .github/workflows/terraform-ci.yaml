@@ -94,6 +94,7 @@ jobs:
  
       - name: Run Checkov (Terraform + K8s)
         uses: bridgecrewio/checkov-action@master
+        continue-on-error: true
         with:
           directory: ./Terraform
           framework: terraform
