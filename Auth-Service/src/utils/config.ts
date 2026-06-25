@@ -19,6 +19,11 @@ export const config = {
   otelCollectorEndpoint: process.env.OTEL_COLLECTOR_ENDPOINT || 'localhost:4318',
   serviceName: process.env.SERVICE_NAME || 'auth-service',
   serviceVersion: process.env.SERVICE_VERSION || '1.0.0',
+  awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+  awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+  awsRegion: process.env.AWS_REGION || '',
+  s3BucketName: process.env.S3_BUCKET_NAME || '',
+  s3EndpointUrl: process.env.S3_ENDPOINT_URL || '',
   metrics: {
     httpRequestDurationName: 'http_request_duration_seconds',
     httpRequestDurationHelp: 'Duration of HTTP requests in seconds',

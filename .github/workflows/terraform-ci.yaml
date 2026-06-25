@@ -145,7 +145,6 @@ jobs:
 
       - name: Terraform Plan
         run: terraform plan -var-file=dev.tfvars -out=tfplan
-        continue-on-error: true
 
       - name: Save Plan Text
         run: terraform show -no-color tfplan > tfplan.txt
@@ -156,3 +155,53 @@ jobs:
           name: terraform-plan
           path: Terraform/tfplan.txt
           retention-days: 5
+
+  terraform-apply:
+    name: Terraform Apply
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+
+    # Only run on pushes to main
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    defaults:
+      run:
+        working-directory: ./Terraform
+
+    environment:
+      name: production    # Optional: require manual approval in GitHub Environments
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6.2.0
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: github-actions-terraform-apply
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: actions/cache@v6.0.0
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-
+
+      - name: Terraform Init
+        run: terraform init -upgrade
+
+      - name: Download Plan
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: terraform-plan
+          path: ./Terraform
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan

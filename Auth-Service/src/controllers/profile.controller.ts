@@ -6,6 +6,7 @@ import type { AuthenticatedRequest } from '../utils/types.js';
 import { latencyHistogram, requestCounter, validationErrorCounter } from '../utils/metrics.js';
 import { withSpan } from '../utils/traces.js';
 import { HttpError } from '../utils/error.js';
+import { formatZodError } from '../utils/zod.js';
 
 export const getProfile = async (req: Request, res: Response) => {
   const start = Date.now();
@@ -32,6 +33,12 @@ export const getProfile = async (req: Request, res: Response) => {
         throw new HttpError(404, 'User not found', 'user_not_found');
       }
 
+      const avatarPreviewUrl = user.avatarUrl
+        ? await withSpan('getAvatarPreviewUrl', () =>
+          profileService.getAvatarPreviewUrl({ fileName: user.avatarUrl! })
+        )
+        : null;
+
       logger.info(`Profile retrieved for user: ${user.username}`, {
         user_id: user._id,
         trace_id: traceId,
@@ -49,9 +56,22 @@ export const getProfile = async (req: Request, res: Response) => {
         message: 'Profile retrieved successfully',
         data: {
           user_id: user._id,
+          first_name: user.firstName,
+          last_name: user.lastName,
           username: user.username,
+          avatar: avatarPreviewUrl,
           email: user.email,
           role: user.role,
+          phoneNumber: user.phoneNumber,
+          businessName: user.businessName,
+          streetAddress: user.streetAddress,
+          city: user.city,
+          stateProvince: user.stateProvince,
+          postalCode: user.postalCode,
+          country: user.country,
+          storeName: user.storeName,
+          storeDescription: user.storeDescription,
+          storeLogoUrl: user.storeLogoUrl,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         },
@@ -116,7 +136,7 @@ export const updateProfile = async (req: Request, res: Response) => {
         const result = updateUserSchema.safeParse(req.body);
         if (!result.success) {
           validationErrorCounter.add(1, { error_type: 'schema' });
-          throw new HttpError(400, result.error.message, 'schema_validation');
+          throw new HttpError(400, formatZodError(result.error), 'schema_validation');
         }
         return result.data;
       });

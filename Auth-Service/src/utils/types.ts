@@ -28,6 +28,17 @@ export interface AuthenticatedRequest extends Request {
   user?: AuthUser;
 }
 
+export interface GetS3UploadUrlInput {
+  fileName: string;
+  contentType?: string;
+  expires?: number
+}
+
+export interface GetS3PreviewUrlInput {
+  fileName: string;
+  expires?: number
+}
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;

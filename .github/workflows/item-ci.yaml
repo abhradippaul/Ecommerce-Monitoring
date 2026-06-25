@@ -1,18 +1,18 @@
-name: Auth CI
+name: Item CI
 
 on:
   push:
     branches: [main, develop]
     paths:
-      - ".github/workflows/auth-ci.yaml"
+      - ".github/workflows/item-ci.yaml"
       - ".github/workflows/service-ci.yaml"
-      - "Auth-Service/**"
+      - "Item-Service/**"
   pull_request:
     branches: [main]
     paths:
-      - ".github/workflows/auth-ci.yaml"
+      - ".github/workflows/item-ci.yaml"
       - ".github/workflows/service-ci.yaml"
-      - "Auth-Service/**"
+      - "Item-Service/**"
   workflow_run:
     workflows: ["Terraform CI"]
     types: [completed]
@@ -30,7 +30,7 @@ jobs:
     if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
     uses: ./.github/workflows/service-ci.yaml
     with:
-      service: Auth-Service
+      service: Item-Service
 
   build-and-push:
     needs: ci
@@ -54,13 +54,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.1.0
 
-      - name: Build and push auth-service-monitoring
+      - name: Build and push item-service-monitoring
         uses: docker/build-push-action@v7
         with:
-          context: ./Auth-Service
+          context: ./Item-Service
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/auth-service-monitoring:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/auth-service-monitoring:${{ env.COMMIT_SHA }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/item-service-monitoring:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/item-service-monitoring:${{ env.COMMIT_SHA }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

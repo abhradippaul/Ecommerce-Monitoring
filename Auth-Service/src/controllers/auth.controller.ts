@@ -1,12 +1,19 @@
 import type { Request, Response } from 'express';
 import { authService } from '../services/auth.service.js';
-import { registerSchema, loginSchema, updateUserSchema } from '../schemas/user.schema.js';
+import {
+  registerSchema,
+  loginSchema,
+  updateUserSchema,
+  uploadAvatarUrlSchema,
+} from '../schemas/user.schema.js';
 import logger from '../utils/logger.js';
 import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
 import type { AuthenticatedRequest } from '../utils/types.js';
 import { latencyHistogram, requestCounter, validationErrorCounter } from '../utils/metrics.js';
 import { withSpan } from '../utils/traces.js';
 import { HttpError } from '../utils/error.js';
+import { v4 as uuid } from 'uuid';
+import { formatZodError } from '../utils/zod.js';
 
 export const register = async (req: Request, res: Response) => {
   const start = Date.now();
@@ -22,13 +29,13 @@ export const register = async (req: Request, res: Response) => {
         const result = registerSchema.safeParse(req.body);
         if (!result.success) {
           validationErrorCounter.add(1, { error_type: 'schema' });
-          throw new HttpError(400, result.error.message, 'schema_validation');
+          throw new HttpError(400, formatZodError(result.error), 'schema_validation');
         }
         return result.data;
       });
 
       const existingUser = await withSpan('register.checkExistingUser', () =>
-        authService.findByEmailOrUsername(validatedData.email, validatedData.username)
+        authService.findByEmailOrUsername(validatedData.email, validatedData.username, validatedData.phoneNumber)
       );
 
       if (existingUser) {
@@ -59,12 +66,15 @@ export const register = async (req: Request, res: Response) => {
       return res.status(201).json({
         message: 'Successfully registered user',
         data: {
+          first_name: user.firstName,
+          last_name: user.lastName,
+          avatar_url: user.avatarUrl,
           user_id: user._id,
           role: user.role,
           email: user.email,
           username: user.username,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
+          created_at: user.createdAt,
+          updated_at: user.updatedAt,
         },
       });
     } catch (err: any) {
@@ -278,7 +288,7 @@ export const updateUser = async (req: Request, res: Response) => {
         const result = updateUserSchema.safeParse(req.body);
         if (!result.success) {
           validationErrorCounter.add(1, { error_type: 'schema' });
-          throw new HttpError(400, result.error.message, 'schema_validation');
+          throw new HttpError(400, formatZodError(result.error), 'schema_validation');
         }
         return result.data;
       });
@@ -332,6 +342,85 @@ export const updateUser = async (req: Request, res: Response) => {
 
       return res.status(statusCode).json({
         message: 'Update failed',
+        error: err.message,
+      });
+    }
+  });
+};
+
+export const uploadAvatarUrl = async (req: Request, res: Response) => {
+  const start = Date.now();
+  const route = req.route ? `${req.baseUrl}${req.route.path}` : req.originalUrl;
+  const httpMethod = req.method;
+  requestCounter.add(1, { route, http_method: httpMethod });
+
+  await withSpan('uploadAvatarUrl', async span => {
+    const traceId = span.spanContext().traceId;
+
+    try {
+      const validatedData = await withSpan('uploadAvatarUrl.schemaValidation', async () => {
+        const result = uploadAvatarUrlSchema.safeParse(req.body);
+        if (!result.success) {
+          validationErrorCounter.add(1, { error_type: 'schema' });
+          throw new HttpError(400, formatZodError(result.error), 'schema_validation');
+        }
+        return result.data;
+      });
+      const { fileExtension, role } = validatedData;
+
+      const fileName = `avatar/images/${role}/${Date.now()}/${uuid()}.${fileExtension}`;
+
+      const presignedUrl = await withSpan('uploadAvatarUrl.getPresignedUrl', () =>
+        authService.getAvatarUploadUrl({
+          fileName,
+          expires: 60 * 60,
+          contentType: `image/${fileExtension}`,
+        })
+      );
+
+      logger.info(`Avatar upload URL generated for file: ${fileName}`, {
+        file_name: fileName,
+        trace_id: traceId,
+        route,
+        http_status_code: 200,
+        duration_ms: Date.now() - start,
+      });
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'success',
+      });
+
+      return res.status(200).json({
+        message: 'Avatar upload URL generated successfully',
+        data: {
+          presignedUrl,
+          fileName,
+        },
+      });
+    } catch (err: any) {
+      const statusCode = err instanceof HttpError ? err.statusCode : 400;
+      const logPayload = {
+        reason: err.errorType ?? 'unexpected',
+        trace_id: traceId,
+        route,
+        http_status_code: statusCode,
+        duration_ms: Date.now() - start,
+      };
+
+      if (statusCode >= 500) {
+        logger.error(`Upload avatar URL error: ${err.message}`, logPayload);
+      } else {
+        logger.warn(`Upload avatar URL error: ${err.message}`, logPayload);
+      }
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'error',
+      });
+
+      return res.status(statusCode).json({
+        message: 'Upload avatar URL failed',
         error: err.message,
       });
     }
