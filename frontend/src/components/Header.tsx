@@ -3,6 +3,7 @@
 import React from "react";
 import { ShoppingBag, ShoppingCart, User, Loader2, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { authenticatedFetch } from "@/lib/api";
 
 interface HeaderProps {
   showActions?: boolean;
@@ -38,12 +39,7 @@ export function Header({
     }
 
     if (token) {
-
-      fetch(`/api/v1/auth/profile`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      })
+      authenticatedFetch(`/api/v1/auth/profile`)
         .then((res) => {
           if (!res.ok) throw new Error("Failed to fetch profile");
           return res.json();
@@ -63,6 +59,7 @@ export function Header({
         })
         .catch((err) => {
           console.error("Error fetching user profile:", err);
+          setUser(null);
         })
         .finally(() => {
           setIsLoaded(true);

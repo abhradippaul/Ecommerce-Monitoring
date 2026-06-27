@@ -24,6 +24,13 @@ export const config = {
   awsRegion: process.env.AWS_REGION || '',
   s3BucketName: process.env.S3_BUCKET_NAME || '',
   s3EndpointUrl: process.env.S3_ENDPOINT_URL || '',
+  valkeyHost: process.env.VALKEY_HOST || 'localhost',
+  valkeyPort: parseInt(process.env.VALKEY_PORT || '6379', 10),
+  rateLimit: {
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
+    max: parseInt(process.env.RATE_LIMIT_MAX || '20', 10),
+    keyPrefix: process.env.RATE_LIMIT_KEY_PREFIX || 'rl',
+  },
   metrics: {
     httpRequestDurationName: 'http_request_duration_seconds',
     httpRequestDurationHelp: 'Duration of HTTP requests in seconds',

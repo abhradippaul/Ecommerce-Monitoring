@@ -7,7 +7,7 @@ import {
   uploadAvatarUrlSchema,
 } from '../schemas/user.schema.js';
 import logger from '../utils/logger.js';
-import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/token.js';
 import type { AuthenticatedRequest } from '../utils/types.js';
 import { latencyHistogram, requestCounter, validationErrorCounter } from '../utils/metrics.js';
 import { withSpan } from '../utils/traces.js';
@@ -500,6 +500,83 @@ export const deleteUser = async (req: Request, res: Response) => {
 
       return res.status(statusCode).json({
         message: 'Delete failed',
+        error: err.message,
+      });
+    }
+  });
+};
+
+export const refresh = async (req: Request, res: Response) => {
+  const start = Date.now();
+  const route = '/auth/refresh';
+  const httpMethod = req.method;
+  requestCounter.add(1, { route, http_method: httpMethod });
+
+  await withSpan('refresh', async span => {
+    const traceId = span.spanContext().traceId;
+
+    try {
+      const { refresh_token } = req.body;
+      if (!refresh_token) {
+        validationErrorCounter.add(1, { error_type: 'missing_refresh_token' });
+        throw new HttpError(400, 'Refresh token is required', 'missing_refresh_token');
+      }
+
+      const payload = verifyRefreshToken(refresh_token);
+      const user = await authService.findById(payload.id);
+
+      if (!user) {
+        validationErrorCounter.add(1, { error_type: 'user_not_found' });
+        throw new HttpError(404, 'User associated with this token not found', 'user_not_found');
+      }
+
+      const newAccessToken = generateAccessToken({
+        id: user._id,
+        role: user.role,
+      });
+
+      logger.info(`Token refreshed successfully for user: ${user.username}`, {
+        user_id: user._id,
+        trace_id: traceId,
+        route,
+        http_status_code: 200,
+        duration_ms: Date.now() - start,
+      });
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'success',
+      });
+
+      return res.status(200).json({
+        message: 'Token refreshed successfully',
+        data: {
+          access_token: newAccessToken,
+        },
+      });
+    } catch (err: any) {
+      const statusCode = err instanceof HttpError ? err.statusCode : 403;
+      const logPayload = {
+        reason: err.errorType ?? 'unexpected',
+        trace_id: traceId,
+        route,
+        http_status_code: statusCode,
+        duration_ms: Date.now() - start,
+      };
+
+      if (statusCode >= 500) {
+        logger.error(`Refresh error: ${err.message}`, logPayload);
+      } else {
+        logger.warn(`Refresh error: ${err.message}`, logPayload);
+      }
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'error',
+      });
+
+      return res.status(statusCode).json({
+        message: 'Token refresh failed',
         error: err.message,
       });
     }

@@ -6,8 +6,10 @@ import {
   updateUser,
   deleteUser,
   uploadAvatarUrl,
+  refresh,
 } from '../controllers/auth.controller.js';
 import { authenticateToken, requireRole } from '../middleware/auth.middleware.js';
+import { authRateLimit } from '../middleware/rate-limit.middleware.js';
 import type { AuthenticatedRequest } from '../utils/types.js';
 
 const router: Router = Router();
@@ -46,7 +48,7 @@ const router: Router = Router();
  *             schema:
  *               $ref: '#/components/schemas/GenericResponse'
  */
-router.post('/register', register);
+router.post('/register', authRateLimit, register);
 
 /**
  * @openapi
@@ -82,7 +84,7 @@ router.post('/register', register);
  *             schema:
  *               $ref: '#/components/schemas/GenericResponse'
  */
-router.post('/login', login);
+router.post('/login', authRateLimit, login);
 
 /**
  * @openapi
@@ -167,7 +169,7 @@ router.post('/logout', logout);
  *             schema:
  *               $ref: '#/components/schemas/GenericResponse'
  */
-router.put('/user/:id', authenticateToken, updateUser);
+router.put('/user/:id', authRateLimit, authenticateToken, updateUser);
 
 /**
  * @openapi
@@ -218,7 +220,7 @@ router.put('/user/:id', authenticateToken, updateUser);
  *             schema:
  *               $ref: '#/components/schemas/GenericResponse'
  */
-router.delete('/user/:id', authenticateToken, deleteUser);
+router.delete('/user/:id', authRateLimit, authenticateToken, deleteUser);
 
 /**
  * @openapi
@@ -278,7 +280,7 @@ router.delete('/user/:id', authenticateToken, deleteUser);
  *             schema:
  *               $ref: '#/components/schemas/GenericResponse'
  */
-router.post('/user/avatar-url', uploadAvatarUrl);
+router.post('/user/avatar-url', authRateLimit, uploadAvatarUrl);
 
 /**
  * @openapi
@@ -390,5 +392,7 @@ router.get('/buyer-only', authenticateToken, requireRole(['buyer']), (req, res) 
     data: (req as AuthenticatedRequest).user,
   });
 });
+
+router.post('/refresh', authRateLimit, refresh);
 
 export default router;

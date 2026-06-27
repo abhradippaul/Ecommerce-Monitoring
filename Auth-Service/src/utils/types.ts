@@ -39,6 +39,12 @@ export interface GetS3PreviewUrlInput {
   expires?: number
 }
 
+export interface RateLimitOptions {
+  windowMs: number;
+  max: number;
+  keyPrefix?: string;
+}
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;

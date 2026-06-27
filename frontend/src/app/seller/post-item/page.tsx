@@ -2,9 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import { authenticatedFetch } from "@/lib/api";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useToast } from "@/components/ui/toast";
 import {
   Package,
   DollarSign,
@@ -49,11 +52,8 @@ const itemFormSchema = z.object({
   price: z.number({ invalid_type_error: "Price must be a number." }).positive({ message: "Price must be a positive number." }),
   discountPrice: z.number().nonnegative({ message: "Discount price must be non-negative." }).nullable().optional(),
   quantity: z.number({ invalid_type_error: "Quantity must be a number." }).int().nonnegative({ message: "Quantity must be non-negative." }),
-  images: z.string().min(1, { message: "At least one product image is required." }).trim(),
+  images: z.string().trim().optional(),
   weight: z.number().positive({ message: "Weight must be a positive number." }).nullable().optional(),
-  dimLength: z.number().positive({ message: "Length must be a positive number." }).nullable().optional(),
-  dimWidth: z.number().positive({ message: "Width must be a positive number." }).nullable().optional(),
-  dimHeight: z.number().positive({ message: "Height must be a positive number." }).nullable().optional(),
   color: z.string().nullable().optional(),
   size: z.string().nullable().optional(),
   material: z.string().nullable().optional(),
@@ -77,13 +77,13 @@ export default function PostItemPage() {
   const router = useRouter();
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [isSeller, setIsSeller] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const { toast } = useToast();
 
   // Media upload states
   const [mediaList, setMediaList] = useState<UploadingImage[]>([]);
-  const [externalUrl, setExternalUrl] = useState("");
+
+  // Category states
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
 
   const form = useForm<ItemFormValues>({
     resolver: zodResolver(itemFormSchema),
@@ -98,9 +98,6 @@ export default function PostItemPage() {
       quantity: 0,
       images: "",
       weight: null,
-      dimLength: null,
-      dimWidth: null,
-      dimHeight: null,
       color: "",
       size: "",
       material: "",
@@ -129,11 +126,7 @@ export default function PostItemPage() {
             : `http://${process.env.NEXT_PUBLIC_AUTH_SERVICE}`)
         : "http://localhost:3002";
 
-      fetch(`${AUTH_SERVICE_URL}/api/v1/auth/profile`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      })
+      authenticatedFetch(`${AUTH_SERVICE_URL}/api/v1/auth/profile`)
         .then((res) => {
           if (!res.ok) throw new Error("Failed to authenticate");
           return res.json();
@@ -145,6 +138,9 @@ export default function PostItemPage() {
         })
         .catch((err) => {
           console.error("Auth validation failed:", err);
+          localStorage.removeItem("user");
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
         })
         .finally(() => {
           setIsAuthChecking(false);
@@ -153,6 +149,8 @@ export default function PostItemPage() {
       setIsAuthChecking(false);
     }
   }, []);
+
+
 
   // Multi-image upload handlers
   const uploadSingleFile = async (file: File, id: string) => {
@@ -239,6 +237,7 @@ export default function PostItemPage() {
 
     } catch (err: any) {
       console.error("Upload error for file:", file.name, err);
+      toast(`Upload error for file: ${file.name}`, "error");
       setMediaList((prev) =>
         prev.map((img) =>
           img.id === id ? { ...img, status: "error" as const } : img
@@ -284,44 +283,61 @@ export default function PostItemPage() {
     });
   };
 
-  const addExternalUrl = () => {
-    if (!externalUrl.trim()) return;
-    try {
-      new URL(externalUrl);
-    } catch (_) {
-      setError("Please enter a valid image URL.");
-      return;
+  const queryClient = useQueryClient();
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const isGateway = typeof window !== "undefined" && (window.location.port === "" || window.location.port === "80");
+      const CATEGORIES_URL = isGateway 
+        ? "/api/v1/items/categories" 
+        : "http://localhost:3001/api/v1/items/categories";
+      
+      const response = await fetch(CATEGORIES_URL);
+      if (!response.ok) {
+        throw new Error("Failed to fetch categories");
+      }
+      const result = await response.json();
+      return (result.data || []) as { _id?: string; name: string }[];
+    },
+  });
+
+
+  const createProductMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const isGateway = typeof window !== "undefined" && (window.location.port === "" || window.location.port === "80");
+      const ITEM_SERVICE_URL = isGateway 
+        ? "/api/v1/items" 
+        : "http://localhost:3001/api/v1/items";
+
+      const response = await authenticatedFetch(ITEM_SERVICE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || result.message || "Failed to create item");
+      }
+      return result.data;
+    },
+    onSuccess: () => {
+      toast("Product posted successfully! Redirecting to catalog...", "success");
+      form.reset();
+      setMediaList([]);
+      setTimeout(() => {
+        router.push("/catalog");
+      }, 1500);
+    },
+    onError: (err: any) => {
+      toast(err.message || "An unexpected error occurred", "error");
     }
-
-    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const newItem: UploadingImage = {
-      id,
-      previewUrl: externalUrl,
-      s3Url: externalUrl,
-      status: "success",
-      progress: 100,
-    };
-
-    setMediaList((prev) => {
-      const next = [...prev, newItem];
-      const urls = next
-        .filter((m) => m.status === "success" && m.s3Url)
-        .map((m) => m.s3Url)
-        .join(", ");
-      form.setValue("images", urls, { shouldValidate: true });
-      return next;
-    });
-
-    setExternalUrl("");
-    setError("");
-  };
+  });
 
   const onSubmit = async (values: ItemFormValues) => {
-    setIsLoading(true);
-    setError("");
-    setSuccess("");
-
-    // Transform values for backend payload
     const payload = {
       name: values.name,
       sku: values.sku || null,
@@ -335,11 +351,7 @@ export default function PostItemPage() {
         ? values.images.split(/[\n,]+/).map(url => url.trim()).filter(Boolean)
         : [],
       weight: values.weight !== null && values.weight !== undefined ? Number(values.weight) : null,
-      dimensions: (values.dimLength || values.dimWidth || values.dimHeight) ? {
-        length: values.dimLength !== null && values.dimLength !== undefined ? Number(values.dimLength) : null,
-        width: values.dimWidth !== null && values.dimWidth !== undefined ? Number(values.dimWidth) : null,
-        height: values.dimHeight !== null && values.dimHeight !== undefined ? Number(values.dimHeight) : null,
-      } : null,
+      dimensions: null,
       color: values.color || null,
       size: values.size || null,
       material: values.material || null,
@@ -348,41 +360,7 @@ export default function PostItemPage() {
       warrantyInfo: values.warrantyInfo || null,
     };
 
-    // Detect if calling through proxy gateway (port 80) or direct local development
-    const isGateway = typeof window !== "undefined" && (window.location.port === "" || window.location.port === "80");
-    const ITEM_SERVICE_URL = isGateway 
-      ? "/api/v1/items" 
-      : "http://localhost:3001/items";
-
-    try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch(ITEM_SERVICE_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": token ? `Bearer ${token}` : "",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || result.message || "Failed to create item");
-      }
-
-      setSuccess("Product posted successfully! Redirecting to catalog...");
-      form.reset();
-      setMediaList([]);
-      
-      setTimeout(() => {
-        router.push("/catalog");
-      }, 1500);
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
-    } finally {
-      setIsLoading(false);
-    }
+    createProductMutation.mutate(payload);
   };
 
   if (isAuthChecking) {
@@ -468,20 +446,7 @@ export default function PostItemPage() {
             </div>
           </div>
 
-          {/* Status Alerts */}
-          {error && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs transition-all animate-in fade-in duration-200">
-              <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
-              <span className="leading-snug">{error}</span>
-            </div>
-          )}
 
-          {success && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs transition-all animate-in fade-in duration-200">
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-              <span className="leading-snug">{success}</span>
-            </div>
-          )}
 
           {/* Item details Form */}
           <Form {...form}>
@@ -543,16 +508,54 @@ export default function PostItemPage() {
                         control={form.control}
                         name="category"
                         render={({ field }) => (
-                          <FormItem className="space-y-1.5">
+                          <FormItem className="space-y-1.5 relative">
                             <FormLabel className="text-[10px] uppercase font-mono tracking-wider text-slate-700 block font-semibold">Category</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <Layers className="absolute left-3 top-3 h-4 w-4 text-slate-400 z-10" />
-                                <Input
-                                  placeholder="Electronics"
-                                  className="w-full bg-white border-slate-300 text-slate-900 placeholder-slate-400 rounded-xl pl-10 pr-4 py-2.5 text-xs focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500/50 transition-all duration-300"
-                                  {...field}
-                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                                  className="w-full bg-white border border-slate-300 text-left text-slate-950 rounded-xl pl-10 pr-4 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500/35 transition-all duration-300 flex items-center justify-between h-[38px] cursor-pointer"
+                                >
+                                  <span>{field.value || "Select Category"}</span>
+                                  <span className="text-slate-400 text-[10px]">▼</span>
+                                </button>
+                                
+                                {isCategoryDropdownOpen && (
+                                  <div className="absolute left-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-2.5 space-y-1.5 animate-in fade-in duration-100 flex flex-col overflow-x-hidden">
+                                    <div className="text-[9px] uppercase font-mono tracking-wider text-slate-400 px-2 py-0.5 font-bold">
+                                      Select Category
+                                    </div>
+                                    
+                                    {/* Scrollable list of categories */}
+                                    <div className="max-h-36 overflow-y-auto space-y-0.5 pr-1 flex flex-col">
+                                      {categories.length === 0 ? (
+                                        <div className="text-slate-400 text-[10px] px-2 py-1">No categories found</div>
+                                      ) : (
+                                        categories.map((cat) => (
+                                          <button
+                                            key={cat._id || cat.name}
+                                            type="button"
+                                            onClick={() => {
+                                              field.onChange(cat.name);
+                                              setIsCategoryDropdownOpen(false);
+                                            }}
+                                            className={`w-full text-left px-3 py-1.5 rounded-lg text-xs transition-all shrink-0 ${
+                                              field.value === cat.name
+                                                ? "bg-indigo-50 text-indigo-750 font-semibold"
+                                                : "hover:bg-slate-50 text-slate-700"
+                                            }`}
+                                          >
+                                            {cat.name}
+                                          </button>
+                                        ))
+                                      )}
+                                    </div>
+                                    
+
+                                  </div>
+                                )}
                               </div>
                             </FormControl>
                             <FormMessage />
@@ -679,25 +682,6 @@ export default function PostItemPage() {
                       </div>
                     )}
 
-                    {/* Manual External URL Add */}
-                    <div className="space-y-2 pt-2 border-t border-slate-100">
-                      <FormLabel className="text-[9px] uppercase font-mono tracking-wider text-slate-500 block font-bold">Or Add External Image URL</FormLabel>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="https://example.com/product-image.jpg"
-                          value={externalUrl}
-                          onChange={(e) => setExternalUrl(e.target.value)}
-                          className="flex-grow bg-white border-slate-300 text-slate-900 placeholder-slate-400 rounded-xl px-3 py-2 text-xs focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500/50"
-                        />
-                        <Button
-                          type="button"
-                          onClick={addExternalUrl}
-                          className="bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700 text-xs font-semibold rounded-xl px-4 shrink-0 transition-all cursor-pointer border h-10"
-                        >
-                          Add URL
-                        </Button>
-                      </div>
-                    </div>
 
                     {/* Hidden Form Field for Form Validation */}
                     <FormField
@@ -902,71 +886,6 @@ export default function PostItemPage() {
                       />
                     </div>
 
-                    {/* Dimensions Row (L x W x H) */}
-                    <div className="space-y-1.5">
-                      <FormLabel className="text-[10px] uppercase font-mono tracking-wider text-slate-700 block font-semibold">Dimensions (Length x Width x Height in cm)</FormLabel>
-                      <div className="grid grid-cols-3 gap-2">
-                        <FormField
-                          control={form.control}
-                          name="dimLength"
-                          render={({ field }) => (
-                            <FormItem className="space-y-0">
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.1"
-                                  placeholder="L"
-                                  className="w-full bg-white border-slate-300 text-slate-900 placeholder-slate-400 rounded-xl px-2.5 py-2.5 text-xs text-center focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500/50 transition-all duration-300"
-                                  value={field.value !== null && field.value !== undefined ? field.value : ""}
-                                  onChange={(e) => field.onChange(e.target.value === "" ? null : parseFloat(e.target.value))}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="dimWidth"
-                          render={({ field }) => (
-                            <FormItem className="space-y-0">
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.1"
-                                  placeholder="W"
-                                  className="w-full bg-white border-slate-300 text-slate-900 placeholder-slate-400 rounded-xl px-2.5 py-2.5 text-xs text-center focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500/50 transition-all duration-300"
-                                  value={field.value !== null && field.value !== undefined ? field.value : ""}
-                                  onChange={(e) => field.onChange(e.target.value === "" ? null : parseFloat(e.target.value))}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="dimHeight"
-                          render={({ field }) => (
-                            <FormItem className="space-y-0">
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.1"
-                                  placeholder="H"
-                                  className="w-full bg-white border-slate-300 text-slate-900 placeholder-slate-400 rounded-xl px-2.5 py-2.5 text-xs text-center focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500/50 transition-all duration-300"
-                                  value={field.value !== null && field.value !== undefined ? field.value : ""}
-                                  onChange={(e) => field.onChange(e.target.value === "" ? null : parseFloat(e.target.value))}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
 
                   </div>
 
@@ -1054,10 +973,10 @@ export default function PostItemPage() {
               {/* Submit Button */}
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={createProductMutation.isPending}
                 className="w-full py-3.5 px-4 text-xs font-semibold text-white rounded-xl shadow-md transition-all duration-300 flex items-center justify-center gap-2 mt-6 active:scale-[0.99] bg-indigo-600 hover:bg-indigo-750 hover:shadow-indigo-650/10 cursor-pointer"
               >
-                {isLoading ? (
+                {createProductMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin text-white" />
                     <span>Publishing Product...</span>

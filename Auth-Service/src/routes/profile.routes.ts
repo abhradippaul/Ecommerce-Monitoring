@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getProfile, updateProfile, deleteProfile } from '../controllers/profile.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { authRateLimit } from '../middleware/rate-limit.middleware.js';
 
 const router: Router = Router();
 
@@ -59,7 +60,7 @@ const router: Router = Router();
  *             schema:
  *               $ref: '#/components/schemas/GenericResponse'
  */
-router.get('/', authenticateToken, getProfile);
+router.get('/', authRateLimit, authenticateToken, getProfile);
 
 /**
  * @openapi
@@ -122,7 +123,7 @@ router.get('/', authenticateToken, getProfile);
  *             schema:
  *               $ref: '#/components/schemas/GenericResponse'
  */
-router.put('/:id', authenticateToken, updateProfile);
+router.put('/:id', authRateLimit, authenticateToken, updateProfile);
 
 /**
  * @openapi
@@ -173,6 +174,6 @@ router.put('/:id', authenticateToken, updateProfile);
  *             schema:
  *               $ref: '#/components/schemas/GenericResponse'
  */
-router.delete('/:id', authenticateToken, deleteProfile);
+router.delete('/:id', authRateLimit, authenticateToken, deleteProfile);
 
 export default router;

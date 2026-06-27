@@ -1,4 +1,11 @@
 services:
+  valkey:
+    image: valkey/valkey:7-alpine3.23
+    ports:
+      - "6379:6379"
+    networks:
+      - ecommerce-monitoring
+
   auth:
     build:
       context: ./Auth-Service

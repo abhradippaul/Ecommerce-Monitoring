@@ -6,8 +6,7 @@ import authRoutes from './routes/auth.routes.js';
 import profileRoutes from './routes/profile.routes.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger.js';
-import logger from './utils/logger.js';
-import { latencyHistogram, requestCounter } from './utils/metrics.js';
+import { requestCounter } from './utils/metrics.js';
 
 const app: Express = express();
 
@@ -35,46 +34,6 @@ app.use('/api/v1/auth/health', healthRoutes);
 app.use('/api/v1/auth/info', infoRoutes);
 app.use('/api/v1/auth/profile', profileRoutes);
 app.use('/api/v1/auth', authRoutes);
-
-/**
- * @openapi
- * /auth/slow:
- *   get:
- *     summary: Simulate a slow request
- *     description: Delays the response by a given duration (in milliseconds) to simulate high latency or slow network conditions.
- *     tags:
- *       - Monitoring
- *     parameters:
- *       - in: query
- *         name: duration
- *         schema:
- *           type: integer
- *           default: 3000
- *         description: The duration to delay the response in milliseconds.
- *     responses:
- *       200:
- *         description: Successfully simulated slow request
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: slow
- *                 duration:
- *                   type: integer
- *                   example: 3000
- */
-app.get('/auth/slow', async (req: Request, res: Response) => {
-  const start = Date.now();
-  const duration = parseInt(req.query.duration as string) || 3000;
-  await new Promise(resolve => setTimeout(resolve, duration));
-  requestCounter.add(1, { route: '/auth/slow' });
-  latencyHistogram.record(Date.now() - start, { route: '/auth/slow' });
-  logger.info(`Slow request completed in ${duration}ms`, { route: '/auth/slow', duration });
-  return res.json({ status: 'slow', duration });
-});
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
