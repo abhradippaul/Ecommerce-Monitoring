@@ -57,7 +57,14 @@ jobs:
           pnpm exec prettier --list-different .
 
       - name: Check Linting
+        continue-on-error: true
         run: pnpm run lint
+
+      - name: Upload analysis results to GitHub
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: eslint-results.sarif
+          wait-for-processing: true
 
       - name: Type Check
         run: pnpm exec tsc --noEmit
