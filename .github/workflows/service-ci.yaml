@@ -63,7 +63,7 @@ jobs:
       - name: Upload analysis results to GitHub
         uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: eslint-results.sarif
+          sarif_file: ${{ inputs.service }}/eslint-results.sarif
           wait-for-processing: true
 
       - name: Type Check
