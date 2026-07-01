@@ -107,48 +107,34 @@ export default function PostItemPage() {
     },
   });
 
-  useEffect(() => {
-    // Auth check
-    const token = localStorage.getItem("access_token");
-    const cachedUser = localStorage.getItem("user");
-
-    if (!token || !cachedUser) {
-      setIsAuthChecking(false);
-      return;
-    }
-
-    try {
-      const parsedUser = JSON.parse(cachedUser);
-      // Retrieve full profile details to verify the role is 'seller'
+  const { data: profileData, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: async () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) return null;
       const AUTH_SERVICE_URL = process.env.NEXT_PUBLIC_AUTH_SERVICE 
         ? (process.env.NEXT_PUBLIC_AUTH_SERVICE.startsWith("http") 
             ? process.env.NEXT_PUBLIC_AUTH_SERVICE 
             : `http://${process.env.NEXT_PUBLIC_AUTH_SERVICE}`)
         : "http://localhost:3002";
+      const res = await authenticatedFetch(`${AUTH_SERVICE_URL}/api/v1/auth/profile`);
+      if (!res.ok) throw new Error("Failed to authenticate");
+      const resData = await res.json();
+      return resData.data;
+    },
+    retry: false,
+  });
 
-      authenticatedFetch(`${AUTH_SERVICE_URL}/api/v1/auth/profile`)
-        .then((res) => {
-          if (!res.ok) throw new Error("Failed to authenticate");
-          return res.json();
-        })
-        .then((resData) => {
-          if (resData.data && resData.data.role === "seller") {
-            setIsSeller(true);
-          }
-        })
-        .catch((err) => {
-          console.error("Auth validation failed:", err);
-          localStorage.removeItem("user");
-          localStorage.removeItem("access_token");
-          localStorage.removeItem("refresh_token");
-        })
-        .finally(() => {
-          setIsAuthChecking(false);
-        });
-    } catch (e) {
+  useEffect(() => {
+    if (profileData) {
+      if (profileData.role === "seller") {
+        setIsSeller(true);
+      }
+      setIsAuthChecking(false);
+    } else if (profileData === null || (!isLoadingProfile && !profileData)) {
       setIsAuthChecking(false);
     }
-  }, []);
+  }, [profileData, isLoadingProfile]);
 
 
 

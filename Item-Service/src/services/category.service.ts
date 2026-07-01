@@ -4,7 +4,7 @@ import type { CategoryInput } from '../schemas/category.schema.js';
 
 export class CategoryService {
   async getAllCategories(): Promise<ICategory[]> {
-    return await Category.find().sort({ name: 1 });
+    return await Category.find().sort({ name: 1 }).select({ name: 1 });
   }
 
   async createCategory(data: CategoryInput): Promise<ICategory> {

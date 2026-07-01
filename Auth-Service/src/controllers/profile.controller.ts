@@ -25,7 +25,7 @@ export const getProfile = async (req: Request, res: Response) => {
       }
 
       const user = await withSpan('getProfile.fetch', () =>
-        profileService.getProfile(authUser.userId, authUser.role)
+        profileService.getLimitedProfile(authUser.userId, authUser.role)
       );
 
       if (!user) {
@@ -55,26 +55,9 @@ export const getProfile = async (req: Request, res: Response) => {
       return res.status(200).json({
         message: 'Profile retrieved successfully',
         data: {
-          user_id: user._id,
-          first_name: user.firstName,
-          last_name: user.lastName,
-          username: user.username,
-          avatar: avatarPreviewUrl,
-          email: user.email,
-          role: user.role,
-          phoneNumber: user.phoneNumber,
-          businessName: user.businessName,
-          streetAddress: user.streetAddress,
-          city: user.city,
-          stateProvince: user.stateProvince,
-          postalCode: user.postalCode,
-          country: user.country,
-          storeName: user.storeName,
-          storeDescription: user.storeDescription,
-          storeLogoUrl: user.storeLogoUrl,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
-        },
+          ...user.toObject(),
+          avatarUrl: avatarPreviewUrl,
+        }
       });
     } catch (err: any) {
       const statusCode = err instanceof HttpError ? err.statusCode : 500;
@@ -99,6 +82,92 @@ export const getProfile = async (req: Request, res: Response) => {
 
       return res.status(statusCode).json({
         message: 'Failed to retrieve profile',
+        error: err.message,
+      });
+    }
+  });
+};
+
+export const getDetailedProfile = async (req: Request, res: Response) => {
+  const start = Date.now();
+  const route = req.route ? `${req.baseUrl}${req.route.path}` : req.originalUrl;
+  const httpMethod = req.method;
+  requestCounter.add(1, { route, http_method: httpMethod });
+
+  await withSpan('getDetailedProfile', async span => {
+    const traceId = span.spanContext().traceId;
+
+    try {
+      const authUser = (req as AuthenticatedRequest).user;
+      if (!authUser) {
+        validationErrorCounter.add(1, { error_type: 'unauthorized' });
+        throw new HttpError(401, 'Unauthorized: Missing authentication context', 'unauthorized');
+      }
+
+      const user = await withSpan('getDetailedProfile.fetch', () =>
+        profileService.getProfile(authUser.userId, authUser.role)
+      );
+
+      if (!user) {
+        validationErrorCounter.add(1, { error_type: 'user_not_found' });
+        throw new HttpError(404, 'User not found', 'user_not_found');
+      }
+
+      const avatarPreviewUrl = user.avatarUrl
+        ? await withSpan('getAvatarPreviewUrl', () =>
+          profileService.getAvatarPreviewUrl({ fileName: user.avatarUrl! })
+        )
+        : null;
+
+      logger.info(`Detailed profile retrieved for user: ${user.username}`, {
+        user_id: user._id,
+        trace_id: traceId,
+        route,
+        http_status_code: 200,
+        duration_ms: Date.now() - start,
+      });
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'success',
+      });
+
+      return res.status(200).json({
+        message: 'Detailed profile retrieved successfully',
+        data: {
+          ...user.toObject(),
+          user_id: user._id,
+          first_name: user.firstName,
+          last_name: user.lastName,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          avatar: avatarPreviewUrl,
+          avatarUrl: avatarPreviewUrl,
+        }
+      });
+    } catch (err: any) {
+      const statusCode = err instanceof HttpError ? err.statusCode : 500;
+      const logPayload = {
+        reason: err.errorType ?? 'unexpected',
+        trace_id: traceId,
+        route,
+        http_status_code: statusCode,
+        duration_ms: Date.now() - start,
+      };
+
+      if (statusCode >= 500) {
+        logger.error(`Get detailed profile error: ${err.message}`, logPayload);
+      } else {
+        logger.warn(`Get detailed profile error: ${err.message}`, logPayload);
+      }
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'error',
+      });
+
+      return res.status(statusCode).json({
+        message: 'Failed to retrieve detailed profile',
         error: err.message,
       });
     }

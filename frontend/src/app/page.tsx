@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import {
   ShoppingCart,
   ShoppingBag,
@@ -81,28 +82,90 @@ const getProductVisuals = (category: string, name: string, index: number) => {
   return { gradient, icon };
 };
 
-export default function CatalogPage() {
+function CatalogPageContent() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [bounceBadge, setBounceBadge] = useState(false);
 
-  const { data: dbProducts = [], isLoading: isLoadingProducts } = useQuery({
-    queryKey: ["products"],
-    queryFn: async () => {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const selectedCategory = searchParams.get("category") || "All";
+
+  const setSelectedCategory = (category: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (category === "All") {
+      params.delete("category");
+    } else {
+      params.set("category", category);
+    }
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  // sentinelRef is defined below as a callback ref to handle conditional mount lifecycle
+
+  const {
+    data: dbProductsData,
+    isLoading: isLoadingProducts,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useInfiniteQuery({
+    queryKey: ["products", selectedCategory],
+    queryFn: async ({ pageParam = 1 }) => {
       const isGateway = typeof window !== "undefined" && (window.location.port === "" || window.location.port === "80");
+      const categoryParam = selectedCategory !== "All" ? `&category=${encodeURIComponent(selectedCategory)}` : "";
       const ITEMS_URL = isGateway 
-        ? "/api/v1/items" 
-        : "http://localhost:3001/api/v1/items";
+        ? `/api/v1/items?page=${pageParam}&limit=6${categoryParam}` 
+        : `http://localhost:3001/api/v1/items?page=${pageParam}&limit=6${categoryParam}`;
       
       const response = await fetch(ITEMS_URL);
       if (!response.ok) {
         throw new Error("Failed to fetch products");
       }
       const result = await response.json();
-      return result.data || [];
+      return result.data;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      if (lastPage && lastPage.hasNextPage) {
+        return lastPage.page + 1;
+      }
+      return undefined;
     }
   });
+
+  const dbProducts = React.useMemo(() => {
+    return dbProductsData ? dbProductsData.pages.flatMap((page) => page.items || []) : [];
+  }, [dbProductsData]);
+
+  const observerRef = React.useRef<IntersectionObserver | null>(null);
+
+  const sentinelRef = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+
+      if (!node) return;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+          }
+        },
+        { threshold: 0.1 }
+      );
+
+      observer.observe(node);
+      observerRef.current = observer;
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage]
+  );
 
   const { data: dbCategories = [], isLoading: isLoadingCategories } = useQuery({
     queryKey: ["categories"],
@@ -122,7 +185,6 @@ export default function CatalogPage() {
   });
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("default");
 
@@ -334,10 +396,10 @@ export default function CatalogPage() {
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`text-xs px-4 py-1.5 rounded-xl font-semibold transition-all duration-300 shrink-0 cursor-pointer ${
+                  className={`text-xs px-4 py-1.5 rounded-xl font-semibold transition-all duration-300 shrink-0 cursor-pointer border ${
                     isActive
-                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
-                      : "bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/60"
+                      ? "bg-indigo-600 text-white border-transparent shadow-md shadow-indigo-200"
+                      : "bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200/60"
                   }`}
                 >
                   {cat}
@@ -372,73 +434,89 @@ export default function CatalogPage() {
             </Button>
           </div>
         ) : (
-          <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-            {filteredProducts.map((product) => {
-              const isOutOfStock = product.quantity === 0;
-              return (
-                <Card
-                  key={product.id}
-                  className="bg-white border border-slate-200 rounded-3xl overflow-hidden hover:border-indigo-550/20 transition-all duration-350 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-slate-100/80 flex flex-col justify-between group"
-                >
-                  <div className={`aspect-[16/10] bg-gradient-to-tr ${product.gradient} p-6 relative flex items-center justify-center overflow-hidden`}>
-                    <div className="absolute inset-0 bg-black/5 backdrop-blur-[1px]" />
-                    <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none transition-transform duration-500 group-hover:scale-125" />
+          <>
+            <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+              {filteredProducts.map((product) => {
+                const isOutOfStock = product.quantity === 0;
+                return (
+                  <Card
+                    key={product.id}
+                    className="bg-white border border-slate-200 rounded-3xl overflow-hidden hover:border-indigo-550/20 transition-all duration-350 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-slate-100/80 flex flex-col justify-between group"
+                  >
+                    <div className={`aspect-[16/10] bg-gradient-to-tr ${product.gradient} p-6 relative flex items-center justify-center overflow-hidden`}>
+                      <div className="absolute inset-0 bg-black/5 backdrop-blur-[1px]" />
+                      <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none transition-transform duration-500 group-hover:scale-125" />
 
-                    <div className="z-10 p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 ease-out">
-                      {product.icon}
+                      <div className="z-10 p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 ease-out">
+                        {product.icon}
+                      </div>
                     </div>
-                  </div>
 
-                  <CardContent className="p-6 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline" className="text-[9px] uppercase font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-200/60">
-                        {product.category}
-                      </Badge>
-                      <span className="flex items-center gap-1.5">
-                        <span className={`h-1.5 w-1.5 rounded-full ${isOutOfStock
-                          ? "bg-red-500"
-                          : product.quantity < 15
-                            ? "bg-amber-500 animate-pulse"
-                            : "bg-emerald-500"
-                          }`} />
-                        <span className={`text-[10px] font-mono font-medium ${isOutOfStock
-                          ? "text-red-500"
-                          : product.quantity < 15
-                            ? "text-amber-600"
-                            : "text-slate-500"
-                          }`}>
-                          {isOutOfStock ? "Sold Out" : product.quantity < 15 ? `Only ${product.quantity} left` : "In stock"}
+                    <CardContent className="p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="text-[9px] uppercase font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-200/60">
+                          {product.category}
+                        </Badge>
+                        <span className="flex items-center gap-1.5">
+                          <span className={`h-1.5 w-1.5 rounded-full ${isOutOfStock
+                            ? "bg-red-500"
+                            : product.quantity < 15
+                              ? "bg-amber-500 animate-pulse"
+                              : "bg-emerald-500"
+                            }`} />
+                          <span className={`text-[10px] font-mono font-medium ${isOutOfStock
+                            ? "text-red-500"
+                            : product.quantity < 15
+                              ? "text-amber-600"
+                              : "text-slate-500"
+                            }`}>
+                            {isOutOfStock ? "Sold Out" : product.quantity < 15 ? `Only ${product.quantity} left` : "In stock"}
+                          </span>
                         </span>
-                      </span>
-                    </div>
+                      </div>
 
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors duration-300">
-                        {product.name}
-                      </h3>
-                      <p className="text-[10px] text-slate-450 font-mono mt-1">SKU: {product.id}</p>
-                    </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors duration-300">
+                          {product.name}
+                        </h3>
+                        <p className="text-[10px] text-slate-450 font-mono mt-1">SKU: {product.id}</p>
+                      </div>
 
-                    <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-100">
-                      <span className="text-base font-bold text-slate-900 font-mono">${product.price.toFixed(2)}</span>
+                      <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-100">
+                        <span className="text-base font-bold text-slate-900 font-mono">${product.price.toFixed(2)}</span>
 
-                      <Button
-                        onClick={() => addToCart(product)}
-                        disabled={isOutOfStock}
-                        className={`px-4 py-2.5 text-xs font-semibold rounded-xl transition-all duration-300 flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer ${isOutOfStock
-                          ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
-                          : "bg-indigo-600 hover:bg-indigo-500 text-white hover:shadow-lg hover:shadow-indigo-200/20"
-                          }`}
-                      >
-                        <ShoppingCart className="h-3.5 w-3.5" />
-                        {isOutOfStock ? "Out of Stock" : "Add to Cart"}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </section>
+                        <Button
+                          onClick={() => addToCart(product)}
+                          disabled={isOutOfStock}
+                          className={`px-4 py-2.5 text-xs font-semibold rounded-xl transition-all duration-300 flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer ${isOutOfStock
+                            ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+                            : "bg-indigo-600 hover:bg-indigo-500 text-white hover:shadow-lg hover:shadow-indigo-200/20"
+                            }`}
+                        >
+                          <ShoppingCart className="h-3.5 w-3.5" />
+                          {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </section>
+
+            {/* Intersection Observer Sentinel / Scroll Trigger */}
+            {(hasNextPage || isFetchingNextPage) && (
+              <div ref={sentinelRef} className="flex flex-col items-center justify-center py-10 gap-2">
+                <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+                <span className="text-[10px] font-semibold text-slate-500 font-mono">Loading more products...</span>
+              </div>
+            )}
+
+            {!hasNextPage && (
+              <div className="text-center py-10 border-t border-slate-100 mt-6">
+                <span className="text-[10px] font-semibold text-slate-400 font-mono">You've viewed all products</span>
+              </div>
+            )}
+          </>
         )}
       </main>
 
@@ -545,5 +623,24 @@ export default function CatalogPage() {
       {/* Footer */}
       <Footer text="Ecommerce Monitoring. Buyer Client Sandbox." />
     </div>
+  );
+}
+
+export default function CatalogPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col min-h-screen bg-[#f8f9fa] justify-between">
+        <Header />
+        <main className="flex-grow flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+            <p className="text-sm font-semibold text-slate-550 font-mono">Loading...</p>
+          </div>
+        </main>
+        <Footer text="Ecommerce Monitoring. Buyer Client Sandbox." />
+      </div>
+    }>
+      <CatalogPageContent />
+    </Suspense>
   );
 }

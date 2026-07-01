@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ShoppingBag, ShoppingCart, User, Loader2, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authenticatedFetch } from "@/lib/api";
@@ -20,16 +21,28 @@ export function Header({
 }: HeaderProps) {
   const [user, setUser] = React.useState<{
     email: string;
-    first_name?: string;
-    last_name?: string;
-    avatar?: string | null;
+    firstName?: string;
+    lastName?: string;
+    avatarUrl?: string | null;
     role?: string;
   } | null>(null);
   const [isLoaded, setIsLoaded] = React.useState(false);
 
+  const { data: profileData, isLoading: isQueryLoading } = useQuery({
+    queryKey: ["profile"],
+    queryFn: async () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) return null;
+      const res = await authenticatedFetch(`/api/v1/auth/profile`);
+      if (!res.ok) throw new Error("Failed to fetch profile");
+      const resData = await res.json();
+      return resData.data;
+    },
+    retry: false,
+  });
+
   React.useEffect(() => {
     const userData = localStorage.getItem("user");
-    const token = localStorage.getItem("access_token");
     if (userData) {
       try {
         setUser(JSON.parse(userData));
@@ -37,37 +50,24 @@ export function Header({
         // ignore
       }
     }
+  }, []);
 
-    if (token) {
-      authenticatedFetch(`/api/v1/auth/profile`)
-        .then((res) => {
-          if (!res.ok) throw new Error("Failed to fetch profile");
-          return res.json();
-        })
-        .then((resData) => {
-          if (resData.data) {
-            const profileData = {
-              email: resData.data.email,
-              first_name: resData.data.first_name,
-              last_name: resData.data.last_name,
-              avatar: resData.data.avatar,
-              role: resData.data.role,
-            };
-            setUser(profileData);
-            localStorage.setItem("user", JSON.stringify(profileData));
-          }
-        })
-        .catch((err) => {
-          console.error("Error fetching user profile:", err);
-          setUser(null);
-        })
-        .finally(() => {
-          setIsLoaded(true);
-        });
-    } else {
+  React.useEffect(() => {
+    if (profileData) {
+      const mapped = {
+        email: profileData.email,
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        avatarUrl: profileData.avatarUrl,
+        role: profileData.role,
+      };
+      setUser(mapped);
+      localStorage.setItem("user", JSON.stringify(mapped));
+      setIsLoaded(true);
+    } else if (!isQueryLoading) {
       setIsLoaded(true);
     }
-  }, []);
+  }, [profileData, isQueryLoading]);
 
   const handleSignOut = () => {
     localStorage.removeItem("user");
@@ -107,30 +107,34 @@ export function Header({
             ) : user ? (
               <div className="flex items-center gap-3">
                 {/* Avatar Display */}
-                {user.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt="User Avatar"
-                    className="h-9 w-9 rounded-full object-cover border border-slate-200 shadow-sm shrink-0"
-                  />
+                {user.avatarUrl ? (
+                  <a href="/profile" className="shrink-0">
+                    <img
+                      src={user.avatarUrl}
+                      alt="User Avatar"
+                      className="h-9 w-9 rounded-full object-cover border border-slate-200 shadow-sm hover:border-indigo-500 transition-colors"
+                    />
+                  </a>
                 ) : (
-                  <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-indigo-50 to-indigo-100/50 border border-indigo-200 flex items-center justify-center text-indigo-650 font-bold text-xs shrink-0 shadow-sm">
-                    {user.first_name && user.last_name
-                      ? `${user.first_name[0]}${user.last_name[0]}`.toUpperCase()
-                      : user.email[0].toUpperCase()}
-                  </div>
+                  <a href="/profile" className="shrink-0">
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-indigo-50 to-indigo-100/50 border border-indigo-200 hover:border-indigo-500 transition-colors flex items-center justify-center text-indigo-650 font-bold text-xs shadow-sm">
+                      {user.firstName && user.lastName
+                        ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+                        : user.email[0].toUpperCase()}
+                    </div>
+                  </a>
                 )}
 
-                <div className="text-right hidden sm:block">
+                <a href="/profile" className="text-right hidden sm:block hover:opacity-80 transition-opacity">
                   <p className="text-[9px] uppercase font-mono tracking-wider text-slate-500 font-semibold leading-tight">
-                    {user.first_name && user.last_name ? "Welcome" : "Logged in as"}
+                    {user.firstName && user.lastName ? "Welcome" : "Logged in as"}
                   </p>
                   <p className="text-xs font-semibold text-slate-800 leading-tight">
-                    {user.first_name && user.last_name
-                      ? `${user.first_name} ${user.last_name}`
+                    {user.firstName && user.lastName
+                      ? `${user.firstName} ${user.lastName}`
                       : user.email}
                   </p>
-                </div>
+                </a>
                 <Button
                   variant="outline"
                   onClick={handleSignOut}

@@ -8,13 +8,13 @@ export const getCategories = async (req: Request, res: Response) => {
   try {
     const categories = await categoryService.getAllCategories();
     logger.info('Fetched all categories');
-    res.status(200).json({
+    return res.status(200).json({
       message: "Successfully fetched all categories",
       data: categories
     });
   } catch (error: any) {
     logger.error(`Error fetching categories: ${error}`);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Failed to fetch categories",
       error: error.message || error
     });
@@ -26,7 +26,7 @@ export const createCategory = async (req: Request, res: Response) => {
     const validatedData = categorySchema.parse(req.body);
     const category = await categoryService.createCategory(validatedData);
     logger.info(`Created/Found category: ${category.name}`);
-    res.status(201).json({
+    return res.status(201).json({
       message: "Successfully processed category",
       data: category
     });
@@ -39,7 +39,7 @@ export const createCategory = async (req: Request, res: Response) => {
       });
     }
     logger.error(`Error creating category: ${error}`);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Failed to create category",
       error: error.message || error
     });

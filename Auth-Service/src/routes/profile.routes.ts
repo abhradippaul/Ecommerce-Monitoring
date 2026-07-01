@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getProfile, updateProfile, deleteProfile } from '../controllers/profile.controller.js';
+import { getProfile, getDetailedProfile, updateProfile, deleteProfile } from '../controllers/profile.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authRateLimit } from '../middleware/rate-limit.middleware.js';
 
@@ -61,6 +61,7 @@ const router: Router = Router();
  *               $ref: '#/components/schemas/GenericResponse'
  */
 router.get('/', authRateLimit, authenticateToken, getProfile);
+router.get('/detailed', authRateLimit, authenticateToken, getDetailedProfile);
 
 /**
  * @openapi

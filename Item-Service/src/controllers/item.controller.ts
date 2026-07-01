@@ -6,11 +6,22 @@ import { ZodError } from 'zod';
 
 export const getItems = async (req: Request, res: Response) => {
   try {
-    const items = await itemService.getAllItems();
-    logger.info('Fetched all items');
-    res.status(200).json({
-      message: "Successfully fetched all the items",
-      data: items
+    const page = req.query.page ? parseInt(req.query.page as string) : 1;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 6;
+    const category = req.query.category as string | undefined;
+
+    const skip = (page - 1) * limit;
+    const { items, hasNextPage } = await itemService.getAllItemsPaginated(skip, limit, category);
+    logger.info(`Fetched items page ${page} with limit ${limit} for category ${category}`);
+
+    return res.status(200).json({
+      message: "Successfully fetched the items",
+      data: {
+        items,
+        page,
+        limit,
+        hasNextPage
+      }
     });
   } catch (error: any) {
     logger.error(`Error fetching items: ${error}`);
@@ -58,7 +69,7 @@ export const updateItem = async (req: Request, res: Response) => {
 
     const validatedData = itemSchema.parse(req.body);
     const updatedItem = await itemService.updateItem(id, validatedData);
-    
+
     if (!updatedItem) {
       logger.warn(`Item not found for update: ${id}`);
       return res.status(404).json({

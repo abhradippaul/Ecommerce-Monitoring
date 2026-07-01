@@ -1,7 +1,5 @@
 import express from 'express';
 import type { Request, Response, NextFunction, Express } from 'express';
-import healthRoutes from './routes/health.routes.js';
-import infoRoutes from './routes/info.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import profileRoutes from './routes/profile.routes.js';
 import swaggerUi from 'swagger-ui-express';
@@ -29,11 +27,44 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/api/v1/auth/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
-app.use('/api/v1/auth/health', healthRoutes);
-app.use('/api/v1/auth/info', infoRoutes);
 app.use('/api/v1/auth/profile', profileRoutes);
 app.use('/api/v1/auth', authRoutes);
+
+app.get("/", (req: Request, res: Response) => {
+  requestCounter.add(1, { route: '/' });
+  return res.status(200).json({
+    message: 'Auth Service is running',
+    data: {
+      status: 'UP',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    },
+  });
+});
+
+app.get("/api/v1/auth/info", (req: Request, res: Response) => {
+  requestCounter.add(1, { route: '/api/v1/auth/info' });
+  return res.status(200).json({
+    message: 'Auth Service is running',
+    data: {
+      status: 'UP',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    },
+  });
+});
+
+app.get("/api/v1/auth/health", (req: Request, res: Response) => {
+  requestCounter.add(1, { route: '/api/v1/auth/health' });
+  return res.status(200).json({
+    message: 'Successfully fetched health status',
+    data: {
+      status: 'UP',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    },
+  });
+});
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {

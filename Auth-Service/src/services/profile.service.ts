@@ -5,7 +5,21 @@ import type { GetS3PreviewUrlInput, UpdateUserInput, UserRole } from '../utils/t
 
 export class ProfileService {
   async getProfile(id: string, role: UserRole): Promise<IUser | null> {
+    if (role === 'buyer') {
+      return await User.findOne({ _id: id, role }).select(
+        '-password -businessName -storeName -storeDescription -storeLogoUrl'
+      );
+    }
+    if (role === 'seller') {
+      return await User.findOne({ _id: id, role }).select('-password');
+    }
     return await User.findOne({ _id: id, role }).select('-password');
+  }
+
+  async getLimitedProfile(id: string, role: UserRole): Promise<IUser | null> {
+    return await User.findOne({ _id: id, role }).select(
+      'firstName lastName username email role avatarUrl'
+    );
   }
 
   async getAvatarPreviewUrl(data: GetS3PreviewUrlInput) {
