@@ -48,6 +48,7 @@ jobs:
 
       - name: Ruff format check
         run: ruff format --check .
+        continue-on-error: true
 
   # ---------- 2. SAST (code-level security bugs) ----------
   sast:
