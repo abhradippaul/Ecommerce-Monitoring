@@ -4,3 +4,11 @@ dist
 logs
 .terraform
 data
+venv
+.vscode
+__pycache__
+fastAPI
+.coverage
+imageWorker
+*.png
+*.webp
