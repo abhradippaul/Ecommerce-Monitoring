@@ -40,8 +40,6 @@ export const getSecretValue = async (_secretName = 'SECRET_NAME') => {
     REFRESH_TOKEN_EXPIRY: process.env.REFRESH_TOKEN_EXPIRY,
     JWT_SECRET: process.env.JWT_SECRET,
     AWS_REGION: process.env.AWS_REGION,
-    S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
-    S3_ENDPOINT_URL: process.env.S3_ENDPOINT_URL,
     AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
     AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
   };
@@ -58,8 +56,6 @@ export const getSecretValue = async (_secretName = 'SECRET_NAME') => {
   config.refreshTokenExpiry = secrets['REFRESH_TOKEN_EXPIRY']!;
   config.jwtSecret = secrets['JWT_SECRET']!;
   config.awsRegion = secrets['AWS_REGION']!;
-  config.s3BucketName = secrets['S3_BUCKET_NAME']!;
-  config.s3EndpointUrl = secrets['S3_ENDPOINT_URL']!;
   config.awsAccessKeyId = secrets['AWS_ACCESS_KEY_ID']!;
   config.awsSecretAccessKey = secrets['AWS_SECRET_ACCESS_KEY']!;
 };

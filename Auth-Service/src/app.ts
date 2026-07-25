@@ -5,6 +5,7 @@ import profileRoutes from './routes/profile.routes.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger.js';
 import { requestCounter } from './utils/metrics.js';
+import { sendQueueMsg } from './utils/rabbitmq.js';
 
 const app: Express = express();
 
@@ -54,8 +55,9 @@ app.get("/api/v1/auth/info", (req: Request, res: Response) => {
   });
 });
 
-app.get("/api/v1/auth/health", (req: Request, res: Response) => {
+app.get("/api/v1/auth/health", async (req: Request, res: Response) => {
   requestCounter.add(1, { route: '/api/v1/auth/health' });
+  await sendQueueMsg("hello", "hello world")
   return res.status(200).json({
     message: 'Successfully fetched health status',
     data: {

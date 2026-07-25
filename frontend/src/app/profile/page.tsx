@@ -7,6 +7,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { authenticatedFetch } from "@/lib/api";
+import { uploadAvatarAndGetPreview, getPreviewPresignedUrl, UserRole } from "@/lib/fileService";
 import { useToast } from "@/components/ui/toast";
 import {
   User,
@@ -112,7 +113,13 @@ function ProfilePageContent() {
         storeLogoUrl: profile.storeLogoUrl || "",
       });
       if (profile.avatarUrl) {
-        setAvatarPreview(profile.avatarUrl);
+        if (profile.avatarUrl.startsWith("http")) {
+          setAvatarPreview(profile.avatarUrl);
+        } else {
+          getPreviewPresignedUrl(profile.avatarUrl)
+            .then((res) => setAvatarPreview(res.preview_url))
+            .catch(() => setAvatarPreview(profile.avatarUrl));
+        }
       }
     }
   }, [profile, form]);
@@ -121,8 +128,6 @@ function ProfilePageContent() {
     const file = e.target.files?.[0];
     if (!file || !profile) return;
 
-    const localUrl = URL.createObjectURL(file);
-    setAvatarPreview(localUrl);
     setIsUploadingAvatar(true);
 
     try {
@@ -132,49 +137,19 @@ function ProfilePageContent() {
         throw new Error("Invalid file type. Only jpg, jpeg, png, and webp are allowed.");
       }
 
-      // 1. Get presigned URL
-      const response = await fetch(`/api/v1/auth/user/avatar-url`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ fileExtension: ext, role: profile.role }),
+      // Upload via File-Service & get preview presigned URL from File-Service
+      const { fileName, previewUrl } = await uploadAvatarAndGetPreview({
+        file,
+        role: (profile.role || "buyer") as UserRole,
+        onProgress: (progress) => setUploadProgress(progress),
       });
 
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || result.message || "Failed to generate upload URL");
-      }
-
-      const { presignedUrl, fileName } = result.data;
-
-      // 2. Upload file directly to S3
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-
-        xhr.upload.addEventListener("progress", (event) => {
-          if (event.lengthComputable) {
-            const percentage = Math.round((event.loaded / event.total) * 100);
-            setUploadProgress(percentage);
-          }
-        });
-
-        xhr.addEventListener("load", () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve();
-          } else {
-            reject(new Error(`Upload failed with status: ${xhr.status}`));
-          }
-        });
-
-        xhr.addEventListener("error", () => reject(new Error("Network upload error.")));
-        xhr.open("PUT", presignedUrl);
-        xhr.setRequestHeader("Content-Type", file.type);
-        xhr.send(file);
-      });
+      // Update UI preview URL returned from File-Service
+      setAvatarPreview(previewUrl);
 
       // Update avatarUrl in backend
-      const updateResponse = await authenticatedFetch(`/api/v1/auth/profile/${profile.user_id}`, {
+      const userId = profile.user_id || profile._id || profile.id;
+      const updateResponse = await authenticatedFetch(`/api/v1/auth/profile/${userId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -184,6 +159,18 @@ function ProfilePageContent() {
 
       if (!updateResponse.ok) {
         throw new Error("Failed to save avatar configuration");
+      }
+
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          parsed.avatarUrl = previewUrl;
+          localStorage.setItem("user", JSON.stringify(parsed));
+          window.dispatchEvent(new Event("storage"));
+        } catch {
+          // ignore
+        }
       }
 
       toast("Profile photo updated successfully!", "success");

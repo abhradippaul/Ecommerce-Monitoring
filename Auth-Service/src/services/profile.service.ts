@@ -1,7 +1,7 @@
 import User from '../models/user.model.js';
 import type { IUser } from '../models/user.model.js';
-import { getPresignedPreviewUrl } from '../utils/aws/s3.js';
-import type { GetS3PreviewUrlInput, UpdateUserInput, UserRole } from '../utils/types.js';
+import type { UpdateUserInput, UserRole } from '../utils/types.js';
+import { getAvatarFilePreview } from '../utils/fileGrpcClient.js';
 
 export class ProfileService {
   async getProfile(id: string, role: UserRole): Promise<IUser | null> {
@@ -22,8 +22,9 @@ export class ProfileService {
     );
   }
 
-  async getAvatarPreviewUrl(data: GetS3PreviewUrlInput) {
-    return await getPresignedPreviewUrl(data);
+  async getAvatarPreviewUrl(fileName: string): Promise<string> {
+    if (!fileName) return '';
+    return await getAvatarFilePreview(fileName);
   }
 
   async updateProfile(id: string, role: UserRole, data: UpdateUserInput): Promise<IUser | null> {
@@ -35,6 +36,7 @@ export class ProfileService {
     if (data.email) user.email = data.email;
     if (data.password) user.password = data.password;
     if (data.role) user.role = data.role;
+    if (data.avatarUrl !== undefined) user.avatarUrl = data.avatarUrl;
 
     if (data.phoneNumber !== undefined) user.phoneNumber = data.phoneNumber;
     if (data.businessName !== undefined) user.businessName = data.businessName;

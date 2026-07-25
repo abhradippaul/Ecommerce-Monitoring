@@ -2,4 +2,5 @@ allowBuilds:
   '@scarf/scarf': false
   aws-sdk: set this to true or false
   esbuild: true
+  grpc-tools: false
   protobufjs: false

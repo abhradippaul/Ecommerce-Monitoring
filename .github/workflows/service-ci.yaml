@@ -49,13 +49,6 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Check formatting (Prettier)
-        continue-on-error: true
-        run: |
-          pnpm exec eslint . \
-            --format @microsoft/eslint-formatter-sarif \
-            --output-file eslint-results.sarif
-
       - name: Check Linting
         continue-on-error: true
         run: pnpm run lint

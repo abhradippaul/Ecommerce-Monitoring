@@ -28,16 +28,7 @@ export interface AuthenticatedRequest extends Request {
   user?: AuthUser;
 }
 
-export interface GetS3UploadUrlInput {
-  fileName: string;
-  contentType?: string;
-  expires?: number
-}
 
-export interface GetS3PreviewUrlInput {
-  fileName: string;
-  expires?: number
-}
 
 export interface RateLimitOptions {
   windowMs: number;

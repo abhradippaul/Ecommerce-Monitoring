@@ -4,9 +4,27 @@ import { config } from './utils/config.js';
 import { connectDB } from './config/db.js';
 import { getSecretValue } from './utils/aws-secret.js';
 import valkey from './utils/valkey.js';
+import grpc from '@grpc/grpc-js'
+import protoLoader from '@grpc/proto-loader'
+import { resolveProtoPath } from './utils/protoResolver.js';
 
 const startServer = async () => {
   try {
+    const userProtoPath = resolveProtoPath('user.proto');
+    const pkgDef = protoLoader.loadSync(userProtoPath);
+    const packageGrpc = grpc.loadPackageDefinition(pkgDef) as any;
+    const userProto = packageGrpc.userPackage;
+    if (userProto?.UserService?.service) {
+      const server = new grpc.Server();
+      server.addService(userProto.UserService.service, {});
+      server.bindAsync('0.0.0.0:50051', grpc.ServerCredentials.createInsecure(), (err, port) => {
+        if (err) {
+          logger.error('Failed to bind gRPC server:', err);
+          return;
+        }
+        logger.info(`gRPC server listening on 0.0.0.0:${port}`);
+      });
+    }
     // 1. Initialize Vault first
     await getSecretValue(config.awsSecretArn);
 

@@ -27,6 +27,15 @@ export function Header({
     role?: string;
   } | null>(null);
   const [isLoaded, setIsLoaded] = React.useState(false);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (user?.avatarUrl) {
+      setAvatarPreviewUrl(user.avatarUrl);
+    } else {
+      setAvatarPreviewUrl(null);
+    }
+  }, [user?.avatarUrl]);
 
   const { data: profileData, isLoading: isQueryLoading } = useQuery({
     queryKey: ["profile"],
@@ -107,10 +116,10 @@ export function Header({
             ) : user ? (
               <div className="flex items-center gap-3">
                 {/* Avatar Display */}
-                {user.avatarUrl ? (
+                {avatarPreviewUrl ? (
                   <a href="/profile" className="shrink-0">
                     <img
-                      src={user.avatarUrl}
+                      src={avatarPreviewUrl}
                       alt="User Avatar"
                       className="h-9 w-9 rounded-full object-cover border border-slate-200 shadow-sm hover:border-indigo-500 transition-colors"
                     />

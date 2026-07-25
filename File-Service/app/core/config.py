@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     s3_avatar_images_folder: str = "avatar/images"
     s3_product_images_folder: str = "product/images"
 
+    # gRPC
+    grpc_port: str = "50052"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

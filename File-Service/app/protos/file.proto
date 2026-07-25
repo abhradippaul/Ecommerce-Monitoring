@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package filePackage;
+
+service FileService {
+  rpc GetAvatarFilePreview (AvatarFilePreviewRequest) returns (AvatarFilePreviewResponse);
+  rpc AvatarPresignedUrl (AvatarPresignedRequest) returns (AvatarPresignedResponse);
+}
+
+message AvatarFilePreviewRequest {
+  string fileName = 1;
+}
+
+message AvatarFilePreviewResponse {
+  string fileName = 1;
+  string previewUrl = 2;
+}
+
+message AvatarPresignedRequest {
+  string fileName = 1;
+  string role = 2;
+}
+
+message AvatarPresignedResponse {
+  string fileName = 1;
+  string uploadUrl = 2;
+}

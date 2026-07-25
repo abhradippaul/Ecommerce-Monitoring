@@ -39,3 +39,24 @@ def generate_upload_presigned_url(
         )
     except ClientError as e:
         raise HTTPException(status_code=500, detail=f"URL generation failed: {e}")
+
+
+def ensure_bucket_cors() -> None:
+    try:
+        cors_config = {
+            "CORSRules": [
+                {
+                    "AllowedHeaders": ["*"],
+                    "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
+                    "AllowedOrigins": ["*"],
+                    "ExposeHeaders": ["ETag"],
+                    "MaxAgeSeconds": 3000,
+                }
+            ]
+        }
+        s3_client.put_bucket_cors(
+            Bucket=settings.s3_bucket_name, CORSConfiguration=cors_config
+        )
+    except Exception as e:
+        print(f"Warning: Could not configure S3 bucket CORS: {e}")
+

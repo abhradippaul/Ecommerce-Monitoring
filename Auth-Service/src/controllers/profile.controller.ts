@@ -34,29 +34,14 @@ export const getProfile = async (req: Request, res: Response) => {
       }
 
       const avatarPreviewUrl = user.avatarUrl
-        ? await withSpan('getAvatarPreviewUrl', () =>
-          profileService.getAvatarPreviewUrl({ fileName: user.avatarUrl! })
-        )
+        ? await profileService.getAvatarPreviewUrl(user.avatarUrl)
         : null;
-
-      logger.info(`Profile retrieved for user: ${user.username}`, {
-        user_id: user._id,
-        trace_id: traceId,
-        route,
-        http_status_code: 200,
-        duration_ms: Date.now() - start,
-      });
-      latencyHistogram.record(Date.now() - start, {
-        route,
-        http_method: httpMethod,
-        status: 'success',
-      });
 
       return res.status(200).json({
         message: 'Profile retrieved successfully',
         data: {
           ...user.toObject(),
-          avatarUrl: avatarPreviewUrl,
+          avatarUrl: avatarPreviewUrl || user.avatarUrl,
         }
       });
     } catch (err: any) {
@@ -114,23 +99,10 @@ export const getDetailedProfile = async (req: Request, res: Response) => {
       }
 
       const avatarPreviewUrl = user.avatarUrl
-        ? await withSpan('getAvatarPreviewUrl', () =>
-          profileService.getAvatarPreviewUrl({ fileName: user.avatarUrl! })
-        )
+        ? await profileService.getAvatarPreviewUrl(user.avatarUrl)
         : null;
 
-      logger.info(`Detailed profile retrieved for user: ${user.username}`, {
-        user_id: user._id,
-        trace_id: traceId,
-        route,
-        http_status_code: 200,
-        duration_ms: Date.now() - start,
-      });
-      latencyHistogram.record(Date.now() - start, {
-        route,
-        http_method: httpMethod,
-        status: 'success',
-      });
+      const finalAvatar = avatarPreviewUrl || user.avatarUrl;
 
       return res.status(200).json({
         message: 'Detailed profile retrieved successfully',
@@ -141,8 +113,8 @@ export const getDetailedProfile = async (req: Request, res: Response) => {
           last_name: user.lastName,
           firstName: user.firstName,
           lastName: user.lastName,
-          avatar: avatarPreviewUrl,
-          avatarUrl: avatarPreviewUrl,
+          avatar: finalAvatar,
+          avatarUrl: finalAvatar,
         }
       });
     } catch (err: any) {

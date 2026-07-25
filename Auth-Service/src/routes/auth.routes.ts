@@ -5,7 +5,6 @@ import {
   logout,
   updateUser,
   deleteUser,
-  uploadAvatarUrl,
   refresh,
 } from '../controllers/auth.controller.js';
 import { authenticateToken, requireRole } from '../middleware/auth.middleware.js';
@@ -221,66 +220,6 @@ router.put('/user/:id', authRateLimit, authenticateToken, updateUser);
  *               $ref: '#/components/schemas/GenericResponse'
  */
 router.delete('/user/:id', authRateLimit, authenticateToken, deleteUser);
-
-/**
- * @openapi
- * /auth/user/avatar-url:
- *   post:
- *     summary: Get presigned URL for avatar upload
- *     description: Generates a presigned S3 URL for uploading a user avatar.
- *     tags:
- *       - Auth
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - fileExtension
- *             properties:
- *               fileExtension:
- *                 type: string
- *                 description: The extension of the file (e.g., 'jpg', 'png').
- *                 example: 'png'
- *     responses:
- *       200:
- *         description: Presigned URL generated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Avatar upload URL generated successfully
- *                 data:
- *                   type: object
- *                   properties:
- *                     presignedUrl:
- *                       type: string
- *                       description: The presigned S3 URL for uploading the avatar.
- *                       example: 'https://example-bucket.s3.amazonaws.com/avatar/images/filename.jpg?X-Amz-Algorithm=...'
- *                     fileName:
- *                       type: string
- *                       description: The generated file name for the avatar.
- *                       example: 'avatar/images/filename.jpg'
- *       400:
- *         description: Missing or invalid file extension
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/GenericResponse'
- *       401:
- *         description: Unauthorized
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/GenericResponse'
- */
-router.post('/user/avatar-url', authRateLimit, uploadAvatarUrl);
 
 /**
  * @openapi

@@ -38,6 +38,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
+import { uploadAvatarAndGetPreview } from "@/lib/fileService";
+
 type AuthTab = "login" | "register";
 
 const loginSchema = z.object({
@@ -121,10 +123,8 @@ export default function AuthPortal() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Local Preview
-    const localUrl = URL.createObjectURL(file);
-    setLogoPreview(localUrl);
     setIsUploadingLogo(true);
+    setUploadProgress(0);
     setError("");
 
     try {
@@ -134,56 +134,17 @@ export default function AuthPortal() {
         throw new Error("Invalid file type. Only jpg, jpeg, png, and webp are allowed.");
       }
 
-      // 1. Get presigned URL
-      const response = await fetch(`/api/v1/auth/user/avatar-url`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ fileExtension: ext, role: "seller" }),
+      // Upload file via File-Service & get preview presigned URL from File-Service
+      const { fileName, previewUrl } = await uploadAvatarAndGetPreview({
+        file,
+        role: "seller",
+        onProgress: (progress) => setUploadProgress(progress),
       });
 
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || result.message || "Failed to generate upload URL");
-      }
+      // Set presigned preview URL for logo previewing in UI
+      setLogoPreview(previewUrl);
 
-      const { presignedUrl, fileName } = result.data;
-
-      // 2. Upload file directly to S3 via XMLHttpRequest to track progress
-      setUploadProgress(0);
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-
-        xhr.upload.addEventListener("progress", (event) => {
-          if (event.lengthComputable) {
-            const percentage = Math.round((event.loaded / event.total) * 100);
-            setUploadProgress(percentage);
-          }
-        });
-
-        xhr.addEventListener("load", () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve();
-          } else {
-            reject(new Error(`Upload failed with status: ${xhr.status}`));
-          }
-        });
-
-        xhr.addEventListener("error", () => {
-          reject(new Error("Network upload error occurred."));
-        });
-
-        xhr.addEventListener("abort", () => {
-          reject(new Error("Upload aborted."));
-        });
-
-        xhr.open("PUT", presignedUrl);
-        xhr.setRequestHeader("Content-Type", file.type);
-        xhr.send(file);
-      });
-
-      // 3. Set the S3 filename key into the form values
+      // Set S3 filename key into form values for seller registration
       registerForm.setValue("storeLogoUrl", fileName);
       registerForm.setValue("avatarUrl", fileName);
       setSuccess("Store logo uploaded successfully!");

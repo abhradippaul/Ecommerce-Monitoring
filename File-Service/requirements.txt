@@ -2,3 +2,6 @@ fastapi[standard]>=0.139.0
 boto3>=1.43.43
 pydantic-settings>=2.14.2
 valkey>=6.1.1
+grpcio>=1.82.1
+grpcio-tools>=1.82.1
+pika>=1.4.2

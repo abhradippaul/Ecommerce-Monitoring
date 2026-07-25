@@ -1,16 +1,11 @@
 import User from '../models/user.model.js';
 import type { IUser } from '../models/user.model.js';
-import type { GetS3UploadUrlInput, RegisterInput, UpdateUserInput } from '../utils/types.js';
-import { getPresignedUploadUrl } from '../utils/aws/s3.js';
+import type { RegisterInput, UpdateUserInput } from '../utils/types.js';
 
 export class AuthService {
   async register(data: RegisterInput): Promise<IUser> {
     const user = new User(data);
     return await user.save();
-  }
-
-  async getAvatarUploadUrl(data: GetS3UploadUrlInput): Promise<string> {
-    return await getPresignedUploadUrl(data);
   }
 
   async findByEmailOrUsername(email: string, username: string, phoneNumber: string): Promise<IUser | null> {
@@ -33,6 +28,7 @@ export class AuthService {
     if (data.email) user.email = data.email;
     if (data.password) user.password = data.password;
     if (data.role) user.role = data.role;
+    if (data.avatarUrl !== undefined) user.avatarUrl = data.avatarUrl;
 
     if (data.phoneNumber !== undefined) user.phoneNumber = data.phoneNumber;
     if (data.businessName !== undefined) user.businessName = data.businessName;

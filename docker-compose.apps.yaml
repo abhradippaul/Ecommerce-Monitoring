@@ -6,6 +6,24 @@ services:
     networks:
       - ecommerce-monitoring
 
+  rabbitmq:
+    image: rabbitmq:latest
+    container_name: rabbitmq
+    ports:
+      - 5672:5672
+      - 15672:15672
+    environment:
+      RABBITMQ_DEFAULT_USER: kalo
+      RABBITMQ_DEFAULT_PASS: kalo
+    configs:
+      - source: rabbitmq-plugins
+        target: /etc/rabbitmq/enabled_plugins
+    volumes:
+      - rabbitmq-lib:/var/lib/rabbitmq/
+      - rabbitmq-log:/var/log/rabbitmq
+    networks:
+      - ecommerce-monitoring
+
   auth:
     build:
       context: ./Auth-Service
@@ -25,6 +43,18 @@ services:
       - "3001:3001"
     env_file:
       - ./Item-Service/.env
+    networks:
+      - ecommerce-monitoring
+
+  file:
+    build:
+      context: ./File-Service
+      dockerfile: Dockerfile
+    ports:
+      - "3004:3004"
+      - "50052:50052"
+    env_file:
+      - ./File-Service/.env
     networks:
       - ecommerce-monitoring
 
@@ -66,3 +96,13 @@ services:
 
 networks:
   ecommerce-monitoring:
+
+configs:
+  rabbitmq-plugins:
+    content: "[rabbitmq_management]."
+
+volumes:
+  rabbitmq-lib:
+    driver: local
+  rabbitmq-log:
+    driver: local

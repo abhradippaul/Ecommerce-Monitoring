@@ -28,6 +28,7 @@ export const loginSchema = z.object({
 export const updateUserSchema = z.object({
   username: z.string().min(3).max(20).trim().optional(),
   email: z.email().trim().optional(),
+  avatarUrl: z.string().trim().optional(),
   password: z.string().min(6).optional(),
   role: z.enum(['admin', 'seller', 'buyer']).optional(),
   phoneNumber: z.string().trim().optional(),
@@ -42,9 +43,4 @@ export const updateUserSchema = z.object({
   storeLogoUrl: z.string().trim().optional(),
 });
 
-export const uploadAvatarUrlSchema = z.object({
-  fileExtension: z.enum(['jpg', 'jpeg', 'png', 'webp'], {
-    message: 'Invalid file extension. Only jpg, jpeg, png, and webp are allowed.',
-  }),
-  role: z.enum(['admin', 'seller', 'buyer']).default('buyer'),
-});
+

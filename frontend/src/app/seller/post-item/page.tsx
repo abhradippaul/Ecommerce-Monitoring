@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { authenticatedFetch } from "@/lib/api";
+import { uploadAvatarAndGetPreview } from "@/lib/fileService";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/components/ui/toast";
@@ -147,70 +148,28 @@ export default function PostItemPage() {
         throw new Error("Invalid file type. Only jpg, jpeg, png, and webp are allowed.");
       }
 
-      // 1. Get presigned URL
-      const response = await fetch(`/api/v1/auth/user/avatar-url`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ fileExtension: ext, role: "seller" }),
-      });
-
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || result.message || "Failed to generate upload URL");
-      }
-
-      const { presignedUrl } = result.data;
-      const finalS3Url = presignedUrl.split("?")[0];
-
-      // Update state to uploading
       setMediaList((prev) =>
         prev.map((img) =>
           img.id === id ? { ...img, status: "uploading" as const, progress: 0 } : img
         )
       );
 
-      // 2. Upload file directly to S3 via XMLHttpRequest to track progress
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-
-        xhr.upload.addEventListener("progress", (event) => {
-          if (event.lengthComputable) {
-            const percentage = Math.round((event.loaded / event.total) * 100);
-            setMediaList((prev) =>
-              prev.map((img) =>
-                img.id === id ? { ...img, progress: percentage } : img
-              )
-            );
-          }
-        });
-
-        xhr.addEventListener("load", () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve();
-          } else {
-            reject(new Error(`Upload failed with status: ${xhr.status}`));
-          }
-        });
-
-        xhr.addEventListener("error", () => {
-          reject(new Error("Network upload error."));
-        });
-
-        xhr.addEventListener("abort", () => {
-          reject(new Error("Upload aborted."));
-        });
-
-        xhr.open("PUT", presignedUrl);
-        xhr.setRequestHeader("Content-Type", file.type);
-        xhr.send(file);
+      const { fileName, previewUrl } = await uploadAvatarAndGetPreview({
+        file,
+        role: "seller",
+        onProgress: (percentage) => {
+          setMediaList((prev) =>
+            prev.map((img) =>
+              img.id === id ? { ...img, progress: percentage } : img
+            )
+          );
+        },
       });
 
       // Update state to success
       setMediaList((prev) => {
         const next = prev.map((img) =>
-          img.id === id ? { ...img, status: "success" as const, s3Url: finalS3Url, progress: 100 } : img
+          img.id === id ? { ...img, status: "success" as const, s3Url: previewUrl, progress: 100 } : img
         );
         // Sync with form value
         const urls = next
