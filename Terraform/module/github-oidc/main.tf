@@ -70,6 +70,37 @@ resource "aws_iam_policy" "github_actions_ecom_policy" {
       {
         Effect = "Allow"
         Action = [
+          "s3:CreateBucket",
+          "s3:DeleteBucket",
+          "s3:ListBucket",
+          "s3:GetBucketLocation",
+          "s3:GetBucketVersioning",
+          "s3:PutBucketVersioning",
+          "s3:GetEncryptionConfiguration",
+          "s3:PutEncryptionConfiguration",
+          "s3:GetBucketPublicAccessBlock",
+          "s3:PutBucketPublicAccessBlock",
+          "s3:GetBucketCORS",
+          "s3:PutBucketCORS",
+          "s3:GetBucketPolicy",
+          "s3:PutBucketPolicy",
+          "s3:GetBucketTagging",
+          "s3:PutBucketTagging"
+        ]
+        Resource = "arn:aws:s3:::ecommerce-monitoring-*-s3-bucket"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ]
+        Resource = "arn:aws:s3:::ecommerce-monitoring-*-s3-bucket/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "iam:GetOpenIDConnectProvider",
           "iam:CreateOpenIDConnectProvider",
           "iam:DeleteOpenIDConnectProvider",

@@ -67,7 +67,6 @@ jobs:
 
   security-scanning:
     name: Security Scanning
-    needs: terraform-validate
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -111,7 +110,7 @@ jobs:
 
   terraform-plan:
     name: Terraform Plan
-    needs: security-scanning
+    needs: ["security-scanning", "terraform-validate"]
     runs-on: ubuntu-latest
     defaults:
       run:
