@@ -90,7 +90,6 @@ jobs:
   dependency-scan:
     name: Dependency & SBOM Scan
     runs-on: ubuntu-latest
-    needs: lint-and-sast
     permissions:
       contents: read
       security-events: write
@@ -165,7 +164,7 @@ jobs:
     defaults:
       run:
         working-directory: ${{ inputs.service }}
-    needs: [dependency-scan]
+    needs: [dependency-scan, lint-and-sast]
     steps:
       - name: Checkout code
         uses: actions/checkout@v7.0.0
