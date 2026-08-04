@@ -59,6 +59,10 @@ jobs:
               - 'Auth-Service/**'
               - '.github/workflows/service-ci.yaml'
               - '.github/workflows/ci.yaml'
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/service-ci.yaml'
+              - '.github/workflows/ci.yaml'
 
       - name: Build matrix of changed Node services
         id: set-matrix
@@ -67,6 +71,7 @@ jobs:
           [ "${{ steps.filter.outputs.item }}" = "true" ]  && services+=('"Item-Service"')
           [ "${{ steps.filter.outputs.order }}" = "true" ] && services+=('"Order-Service"')
           [ "${{ steps.filter.outputs.auth }}" = "true" ]  && services+=('"Auth-Service"')
+          [ "${{ steps.filter.outputs.frontend }}" = "true" ] && services+=('"frontend"')
           json=$(IFS=,; echo "[${services[*]}]")
           echo "matrix=$json" >> "$GITHUB_OUTPUT"
           echo "Node services to build: $json"
