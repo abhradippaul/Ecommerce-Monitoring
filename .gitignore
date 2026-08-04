@@ -13,3 +13,4 @@ imageWorker
 *.png
 *.webp
 coverage
+*.sarif
