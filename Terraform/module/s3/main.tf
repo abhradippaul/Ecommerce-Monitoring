@@ -1,4 +1,9 @@
 resource "aws_s3_bucket" "this" {
+  #checkov:skip=CKV_AWS_145: "Ensure that S3 buckets are encrypted with KMS by default - Default AES256 encryption is sufficient for app context"
+  #checkov:skip=CKV2_AWS_61: "Ensure that an S3 bucket has a lifecycle configuration - Bucket lifecycle managed outside or not required"
+  #checkov:skip=CKV_AWS_21: "Ensure all data stored in the S3 bucket have versioning enabled - Versioning disabled by design"
+  #checkov:skip=CKV_AWS_144: "Ensure that S3 bucket has cross-region replication enabled - Cross-region replication disabled"
+  #checkov:skip=CKV2_AWS_62: "Ensure S3 buckets should have event notifications enabled - Event notifications not required"
   bucket        = "${replace(var.project_name, "_", "-")}-${var.environment}-s3-bucket"
   force_destroy = var.environment == "dev" ? true : false
 

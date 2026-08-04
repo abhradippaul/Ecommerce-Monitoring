@@ -68,8 +68,6 @@ jobs:
         id: set-matrix
         run: |
           services=()
-          [ "${{ steps.filter.outputs.item }}" = "true" ]  && services+=('"Item-Service"')
-          [ "${{ steps.filter.outputs.order }}" = "true" ] && services+=('"Order-Service"')
           [ "${{ steps.filter.outputs.auth }}" = "true" ]  && services+=('"Auth-Service"')
           [ "${{ steps.filter.outputs.frontend }}" = "true" ] && services+=('"frontend"')
           json=$(IFS=,; echo "[${services[*]}]")
