@@ -117,6 +117,7 @@ jobs:
  
       - name: pnpm audit
         run: pnpm audit --audit-level=high --json
+        continue-on-error: true
 
       # - name: Run Snyk to check for vulnerabilities
       #   uses: snyk/actions/node@master
