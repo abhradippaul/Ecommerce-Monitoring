@@ -1,0 +1,254 @@
+name: CI
+
+# Single entry point replacing item-ci.yaml, order-ci.yaml, auth-ci.yaml,
+# file-ci.yaml and the workflow_run trigger previously used to chain off
+# terraform-ci.yaml. service-ci.yaml and terraform-ci.yaml stay as
+# reusable (workflow_call) workflows and are invoked as jobs below.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+  id-token: write
+
+env:
+  PYTHON_VERSION: '3.12'
+  COMMIT_SHA: ${{ github.sha }}
+
+jobs:
+  # ---------------------------------------------------------------------
+  # 0. Work out what changed so unrelated services/stacks are skipped
+  # ---------------------------------------------------------------------
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      terraform: ${{ steps.filter.outputs.terraform }}
+      file: ${{ steps.filter.outputs.file }}
+      node-matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7.0.0
+
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v4.0.2
+        id: filter
+        with:
+          filters: |
+            terraform:
+              - 'Terraform/**'
+              - '.github/workflows/terraform-ci.yaml'
+              - '.github/workflows/ci.yaml'
+            file:
+              - 'File-Service/**'
+              - '.github/workflows/ci.yaml'
+            item:
+              - 'Item-Service/**'
+              - '.github/workflows/service-ci.yaml'
+              - '.github/workflows/ci.yaml'
+            order:
+              - 'Order-Service/**'
+              - '.github/workflows/service-ci.yaml'
+              - '.github/workflows/ci.yaml'
+            auth:
+              - 'Auth-Service/**'
+              - '.github/workflows/service-ci.yaml'
+              - '.github/workflows/ci.yaml'
+
+      - name: Build matrix of changed Node services
+        id: set-matrix
+        run: |
+          services=()
+          [ "${{ steps.filter.outputs.item }}" = "true" ]  && services+=('"Item-Service"')
+          [ "${{ steps.filter.outputs.order }}" = "true" ] && services+=('"Order-Service"')
+          [ "${{ steps.filter.outputs.auth }}" = "true" ]  && services+=('"Auth-Service"')
+          json=$(IFS=,; echo "[${services[*]}]")
+          echo "matrix=$json" >> "$GITHUB_OUTPUT"
+          echo "Node services to build: $json"
+
+  # ---------------------------------------------------------------------
+  # 1. Terraform (infra) — service deploys wait on this via `needs`
+  # ---------------------------------------------------------------------
+  terraform:
+    name: Terraform
+    needs: detect-changes
+    if: needs.detect-changes.outputs.terraform == 'true'
+    uses: ./.github/workflows/terraform-ci.yaml
+    secrets: inherit
+
+  # ---------------------------------------------------------------------
+  # 2. Node services (Item / Order / Auth) — matrixed, only changed ones
+  # ---------------------------------------------------------------------
+  node-ci:
+    name: ${{ matrix.service }} CI
+    needs: [detect-changes, terraform]
+    if: |
+      always() &&
+      needs.detect-changes.outputs.node-matrix != '[]' &&
+      (needs.terraform.result == 'success' || needs.terraform.result == 'skipped')
+    strategy:
+      matrix:
+        service: ${{ fromJSON(needs.detect-changes.outputs.node-matrix) }}
+    uses: ./.github/workflows/service-ci.yaml
+    with:
+      service: ${{ matrix.service }}
+    secrets: inherit
+
+  node-build-and-push:
+    name: Build & Push ${{ matrix.service }}
+    needs: [detect-changes, node-ci]
+    if: needs.detect-changes.outputs.node-matrix != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJSON(needs.detect-changes.outputs.node-matrix) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7.0.0
+
+      - name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4.2.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.1.0
+
+      - name: Compute image name
+        id: img
+        run: |
+          name=$(echo "${{ matrix.service }}" | tr '[:upper:]' '[:lower:]')
+          echo "name=${name}-monitoring" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: ./${{ matrix.service }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.img.outputs.name }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.img.outputs.name }}:${{ env.COMMIT_SHA }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------------
+  # 3. File-Service (Python) — different stack, kept as its own jobs
+  # ---------------------------------------------------------------------
+  # file-lint:
+  #   name: File-Service Lint
+  #   needs: detect-changes
+  #   if: needs.detect-changes.outputs.file == 'true'
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: File-Service
+  #   steps:
+  #     - uses: actions/checkout@v7.0.0
+  #     - uses: actions/setup-python@v6.3.0
+  #       with:
+  #         python-version: ${{ env.PYTHON_VERSION }}
+  #         cache: 'pip'
+  #         cache-dependency-path: File-Service/requirements.txt
+  #     - run: pip install ruff
+  #     - name: Ruff lint
+  #       run: ruff check . --output-format=github
+  #     - name: Ruff format check
+  #       run: ruff format --check .
+  #       continue-on-error: true
+
+  # file-sast:
+  #   name: File-Service SAST - Bandit
+  #   needs: detect-changes
+  #   if: needs.detect-changes.outputs.file == 'true'
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     security-events: write
+  #   defaults:
+  #     run:
+  #       working-directory: File-Service
+  #   steps:
+  #     - uses: actions/checkout@v7.0.0
+  #     - uses: actions/setup-python@v6.3.0
+  #       with:
+  #         python-version: ${{ env.PYTHON_VERSION }}
+  #         cache: 'pip'
+  #         cache-dependency-path: File-Service/requirements.txt
+  #     - run: pip install bandit[sarif]
+  #     - name: Run Bandit
+  #       run: bandit -r . -f sarif -o bandit-results.sarif --exit-zero
+  #     - uses: github/codeql-action/upload-sarif@v4
+  #       with:
+  #         sarif_file: File-Service/bandit-results.sarif
+  #         category: bandit
+
+  # file-codeql:
+  #   name: File-Service SAST - CodeQL
+  #   needs: detect-changes
+  #   if: needs.detect-changes.outputs.file == 'true'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v7.0.0
+  #     - uses: github/codeql-action/init@v4
+  #       with:
+  #         languages: python
+  #     - uses: github/codeql-action/analyze@v4
+  #       with:
+  #         category: codeql-python
+
+  # file-test:
+  #   name: File-Service Unit Tests
+  #   needs: detect-changes
+  #   if: needs.detect-changes.outputs.file == 'true'
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: File-Service
+  #   steps:
+  #     - uses: actions/checkout@v7.0.0
+  #     - uses: actions/setup-python@v6.3.0
+  #       with:
+  #         python-version: ${{ env.PYTHON_VERSION }}
+  #         cache: 'pip'
+  #         cache-dependency-path: File-Service/requirements.txt
+  #     - run: |
+  #         pip install -r requirements.txt
+  #         pip install pytest pytest-cov
+  #     - name: Run tests
+  #       run: pytest --cov=. --cov-report=xml --cov-fail-under=70
+  #     - uses: actions/upload-artifact@v7.0.1
+  #       with:
+  #         name: coverage-report
+  #         path: File-Service/coverage.xml
+
+  # file-dependency-scan:
+    name: File-Service Dependency Scan
+    needs: detect-changes
+    if: needs.detect-changes.outputs.file == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: File-Service
+    steps:
+      - uses: actions/checkout@v7.0.0
+      - uses: actions/setup-python@v6.3.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: File-Service/requirements.txt
+      - run: pip install pip-audit
+      - name: pip-audit
+        run: pip-audit -r requirements.txt -f json -o pip-audit-results.json || true
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: dependency-audit
+          path: File-Service/pip-audit-results.json
