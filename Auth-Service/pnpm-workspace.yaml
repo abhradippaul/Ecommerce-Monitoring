@@ -4,3 +4,4 @@ allowBuilds:
   esbuild: true
   grpc-tools: false
   protobufjs: false
+  unrs-resolver: false

@@ -26,12 +26,8 @@ const sdk = new NodeSDK({
     }),
   ],
   logRecordProcessors: [
-    new SimpleLogRecordProcessor(new ConsoleLogRecordExporter()),
-    new BatchLogRecordProcessor(
-      new OTLPLogExporter({
-        url: 'http://localhost:4318/v1/logs',
-      })
-    ),
+    new SimpleLogRecordProcessor({ exporter: new ConsoleLogRecordExporter() }),
+    new BatchLogRecordProcessor({ exporter: new OTLPLogExporter({ url: 'http://localhost:4318/v1/logs' }) }),
   ],
   instrumentations: [getNodeAutoInstrumentations(), new WinstonInstrumentation()],
 });

@@ -12,3 +12,4 @@ fastAPI
 imageWorker
 *.png
 *.webp
+coverage
