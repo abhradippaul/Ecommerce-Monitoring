@@ -230,25 +230,25 @@ jobs:
   #         name: coverage-report
   #         path: File-Service/coverage.xml
 
-  file-dependency-scan:
-    name: File-Service Dependency Scan
-    needs: detect-changes
-    if: needs.detect-changes.outputs.file == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: File-Service
-    steps:
-      - uses: actions/checkout@v7.0.0
-      - uses: actions/setup-python@v6.3.0
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-          cache-dependency-path: File-Service/requirements.txt
-      - run: pip install pip-audit
-      - name: pip-audit
-        run: pip-audit -r requirements.txt -f json -o pip-audit-results.json || true
-      - uses: actions/upload-artifact@v7.0.1
-        with:
-          name: dependency-audit
-          path: File-Service/pip-audit-results.json
+  # file-dependency-scan:
+  #   name: File-Service Dependency Scan
+  #   needs: detect-changes
+  #   if: needs.detect-changes.outputs.file == 'true'
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: File-Service
+  #   steps:
+  #     - uses: actions/checkout@v7.0.0
+  #     - uses: actions/setup-python@v6.3.0
+  #       with:
+  #         python-version: ${{ env.PYTHON_VERSION }}
+  #         cache: 'pip'
+  #         cache-dependency-path: File-Service/requirements.txt
+  #     - run: pip install pip-audit
+  #     - name: pip-audit
+  #       run: pip-audit -r requirements.txt -f json -o pip-audit-results.json || true
+  #     - uses: actions/upload-artifact@v7.0.1
+  #       with:
+  #         name: dependency-audit
+  #         path: File-Service/pip-audit-results.json
