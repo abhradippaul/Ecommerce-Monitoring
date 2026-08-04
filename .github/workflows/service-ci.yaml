@@ -159,7 +159,7 @@ jobs:
   # 3. UNIT + INTEGRATION TESTS
   # ---------------------------------------------------------------------
   test:
-    name: Unit & Integration Tests
+    name: Unit & Integration Tests 
     runs-on: ubuntu-latest
     defaults:
       run:
