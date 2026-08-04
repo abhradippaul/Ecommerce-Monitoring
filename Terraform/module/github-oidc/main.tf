@@ -87,16 +87,10 @@ resource "aws_iam_policy" "github_actions_ecom_policy" {
           "s3:GetBucketTagging",
           "s3:PutBucketTagging"
         ]
-        Resource = "arn:aws:s3:::ecommerce-monitoring-*-s3-bucket"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject"
+        Resource = [
+          "arn:aws:s3:::ecommerce-monitoring*",
+          "arn:aws:s3:::ecommerce-monitoring*/*"
         ]
-        Resource = "arn:aws:s3:::ecommerce-monitoring-*-s3-bucket/*"
       },
       {
         Effect = "Allow"

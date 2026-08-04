@@ -1,12 +1,6 @@
 name: Terraform CI
 
 on:
-  push:
-    branches: [main, develop]
-    paths: ["Terraform/**", ".github/workflows/terraform-ci.yaml"]
-  pull_request:
-    branches: [main]
-    paths: ["Terraform/**", ".github/workflows/terraform-ci.yaml"]
   workflow_call: {}   # allows ci.yaml to invoke this as a job
 
 env:
