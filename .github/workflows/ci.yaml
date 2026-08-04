@@ -230,7 +230,7 @@ jobs:
   #         name: coverage-report
   #         path: File-Service/coverage.xml
 
-  # file-dependency-scan:
+  file-dependency-scan:
     name: File-Service Dependency Scan
     needs: detect-changes
     if: needs.detect-changes.outputs.file == 'true'
