@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { profileService } from '../services/profile.service.js';
-import { updateUserSchema } from '../schemas/user.schema.js';
+import { updateUserSchema, previewPresignedUrlSchema } from '../schemas/user.schema.js';
 import logger from '../utils/logger.js';
 import type { AuthenticatedRequest } from '../utils/types.js';
 import { latencyHistogram, requestCounter, validationErrorCounter } from '../utils/metrics.js';
@@ -312,6 +312,139 @@ export const deleteProfile = async (req: Request, res: Response) => {
 
       return res.status(statusCode).json({
         message: 'Profile delete failed',
+        error: err.message,
+      });
+    }
+  });
+};
+
+export const getAvatarPresignedUrl = async (req: Request, res: Response) => {
+  const start = Date.now();
+  const route = req.route ? `${req.baseUrl}${req.route.path}` : req.originalUrl;
+  const httpMethod = req.method;
+  requestCounter.add(1, { route, http_method: httpMethod });
+
+  await withSpan('getAvatarPresignedUrl', async span => {
+    const traceId = span.spanContext().traceId;
+
+    try {
+      const authUser = (req as AuthenticatedRequest).user;
+      if (!authUser) {
+        validationErrorCounter.add(1, { error_type: 'unauthorized' });
+        throw new HttpError(401, 'Unauthorized: Missing authentication context', 'unauthorized');
+      }
+
+      const fileExtension = (req.query.fileExtension as string) || (req.query.extension as string) || (req.query.fileName as string);
+      if (!fileExtension) {
+        validationErrorCounter.add(1, { error_type: 'missing_filename' });
+        throw new HttpError(400, 'fileExtension or fileName query parameter is required', 'missing_filename');
+      }
+
+      const result = await profileService.getAvatarPresignedUrl(fileExtension, authUser.role);
+
+      if (!result.uploadUrl) {
+        throw new HttpError(500, 'Failed to generate presigned upload URL', 'presigned_url_failed');
+      }
+
+      return res.status(200).json({
+        message: 'Presigned upload URL generated successfully',
+        data: result,
+      });
+    } catch (err: any) {
+      const statusCode = err instanceof HttpError ? err.statusCode : 500;
+      const logPayload = {
+        reason: err.errorType ?? 'unexpected',
+        trace_id: traceId,
+        route,
+        http_status_code: statusCode,
+        duration_ms: Date.now() - start,
+      };
+
+      if (statusCode >= 500) {
+        logger.error(`Get avatar presigned URL error: ${err.message}`, logPayload);
+      } else {
+        logger.warn(`Get avatar presigned URL error: ${err.message}`, logPayload);
+      }
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'error',
+      });
+
+      return res.status(statusCode).json({
+        message: 'Failed to generate presigned upload URL',
+        error: err.message,
+      });
+    }
+  });
+};
+
+export const getPreviewPresignedUrl = async (req: Request, res: Response) => {
+  const start = Date.now();
+  const route = req.route ? `${req.baseUrl}${req.route.path}` : req.originalUrl;
+  const httpMethod = req.method;
+  requestCounter.add(1, { route, http_method: httpMethod });
+
+  await withSpan('getPreviewPresignedUrl', async span => {
+    const traceId = span.spanContext().traceId;
+
+    try {
+      const validatedData = await withSpan('getPreviewPresignedUrl.schemaValidation', async () => {
+        const result = previewPresignedUrlSchema.safeParse(req.body);
+        if (!result.success) {
+          validationErrorCounter.add(1, { error_type: 'schema' });
+          throw new HttpError(400, formatZodError(result.error), 'schema_validation');
+        }
+        return result.data;
+      });
+
+      const { file_name } = validatedData;
+      const preview_url = await profileService.getAvatarPreviewUrl(file_name);
+
+      if (!preview_url) {
+        throw new HttpError(500, 'Failed to generate presigned preview URL', 'presigned_url_failed');
+      }
+
+      logger.info(`Preview presigned URL generated for file: ${file_name}`, {
+        file_name,
+        trace_id: traceId,
+        route,
+        http_status_code: 200,
+        duration_ms: Date.now() - start,
+      });
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'success',
+      });
+
+      return res.status(200).json({
+        file_name,
+        preview_url,
+      });
+    } catch (err: any) {
+      const statusCode = err instanceof HttpError ? err.statusCode : 400;
+      const logPayload = {
+        reason: err.errorType ?? 'unexpected',
+        trace_id: traceId,
+        route,
+        http_status_code: statusCode,
+        duration_ms: Date.now() - start,
+      };
+
+      if (statusCode >= 500) {
+        logger.error(`Get presigned preview URL error: ${err.message}`, logPayload);
+      } else {
+        logger.warn(`Get presigned preview URL error: ${err.message}`, logPayload);
+      }
+      latencyHistogram.record(Date.now() - start, {
+        route,
+        http_method: httpMethod,
+        status: 'error',
+      });
+
+      return res.status(statusCode).json({
+        message: 'Failed to generate presigned preview URL',
         error: err.message,
       });
     }

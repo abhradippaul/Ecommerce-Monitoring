@@ -1,0 +1,1 @@
+docker compose -f docker-compose.monitoring.yaml up -d

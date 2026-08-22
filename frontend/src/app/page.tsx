@@ -38,6 +38,7 @@ interface Product {
   sales: number;
   gradient: string;
   icon: React.ReactNode;
+  images?: string[];
 }
 
 interface CartItem {
@@ -93,6 +94,7 @@ function CatalogPageContent() {
   const pathname = usePathname();
 
   const selectedCategory = searchParams.get("category") || "All";
+  const sortBy = searchParams.get("sortBy") || "default";
 
   const setSelectedCategory = (category: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -100,6 +102,16 @@ function CatalogPageContent() {
       params.delete("category");
     } else {
       params.set("category", category);
+    }
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const setSortBy = (sortOption: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (sortOption === "default") {
+      params.delete("sortBy");
+    } else {
+      params.set("sortBy", sortOption);
     }
     router.push(`${pathname}?${params.toString()}`);
   };
@@ -113,13 +125,14 @@ function CatalogPageContent() {
     hasNextPage,
     isFetchingNextPage
   } = useInfiniteQuery({
-    queryKey: ["products", selectedCategory],
+    queryKey: ["products", selectedCategory, sortBy],
     queryFn: async ({ pageParam = 1 }) => {
       const isGateway = typeof window !== "undefined" && (window.location.port === "" || window.location.port === "80");
       const categoryParam = selectedCategory !== "All" ? `&category=${encodeURIComponent(selectedCategory)}` : "";
+      const sortParam = sortBy !== "default" ? `&sortBy=${encodeURIComponent(sortBy)}` : "";
       const ITEMS_URL = isGateway 
-        ? `/api/v1/items?page=${pageParam}&limit=6${categoryParam}` 
-        : `http://localhost:3001/api/v1/items?page=${pageParam}&limit=6${categoryParam}`;
+        ? `/api/v1/items?page=${pageParam}&limit=6${categoryParam}${sortParam}` 
+        : `http://localhost:3001/api/v1/items?page=${pageParam}&limit=6${categoryParam}${sortParam}`;
       
       const response = await fetch(ITEMS_URL);
       if (!response.ok) {
@@ -186,7 +199,6 @@ function CatalogPageContent() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("default");
 
   useEffect(() => {
     if (dbProducts.length > 0) {
@@ -201,6 +213,7 @@ function CatalogPageContent() {
           sales: item.sales || Math.floor((item.price * 3) % 200),
           gradient: visuals.gradient,
           icon: visuals.icon,
+          images: item.images || [],
         };
       });
       setProducts(mapped);
@@ -213,12 +226,6 @@ function CatalogPageContent() {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             product.category.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
-    })
-    .sort((a, b) => {
-      if (sortBy === "price-asc") return a.price - b.price;
-      if (sortBy === "price-desc") return b.price - a.price;
-      if (sortBy === "sales-desc") return b.sales - a.sales;
-      return 0;
     });
 
   useEffect(() => {
@@ -443,13 +450,23 @@ function CatalogPageContent() {
                     key={product.id}
                     className="bg-white border border-slate-200 rounded-3xl overflow-hidden hover:border-indigo-550/20 transition-all duration-350 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-slate-100/80 flex flex-col justify-between group"
                   >
-                    <div className={`aspect-[16/10] bg-gradient-to-tr ${product.gradient} p-6 relative flex items-center justify-center overflow-hidden`}>
-                      <div className="absolute inset-0 bg-black/5 backdrop-blur-[1px]" />
-                      <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none transition-transform duration-500 group-hover:scale-125" />
+                    <div className={`aspect-[16/10] bg-gradient-to-tr ${product.gradient} relative flex items-center justify-center overflow-hidden`}>
+                      {product.images && product.images.length > 0 && product.images[0] ? (
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <>
+                          <div className="absolute inset-0 bg-black/5 backdrop-blur-[1px]" />
+                          <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none transition-transform duration-500 group-hover:scale-125" />
 
-                      <div className="z-10 p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 ease-out">
-                        {product.icon}
-                      </div>
+                          <div className="z-10 p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 ease-out">
+                            {product.icon}
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     <CardContent className="p-6 space-y-4">

@@ -116,6 +116,147 @@ export async function getPreviewPresignedUrl(
   return data;
 }
 
+export function getAuthServiceBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_AUTH_SERVICE;
+  if (envUrl) {
+    const formatted = envUrl.startsWith("http") ? envUrl : `http://${envUrl}`;
+    return `${formatted}/api/v1/auth`;
+  }
+
+  if (typeof window !== "undefined") {
+    const isGateway = window.location.port === "" || window.location.port === "80";
+    if (isGateway) {
+      return "/api/v1/auth";
+    }
+  }
+
+  return "http://localhost:3002/api/v1/auth";
+}
+
+/**
+ * Call Auth-Service to generate S3 preview presigned URL for a given file key
+ */
+export async function getAuthServicePreviewPresignedUrl(
+  fileName: string
+): Promise<GetPresignedUrlPreviewResponse> {
+  const baseUrl = getAuthServiceBaseUrl();
+  const response = await fetch(`${baseUrl}/profile/presigned-url/preview`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      file_name: fileName,
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.detail || data.message || "Failed to generate preview presigned URL from Auth-Service");
+  }
+
+  return data;
+}
+
+/**
+ * Call Auth-Service to generate S3 upload presigned URL
+ */
+export async function getAuthServiceAvatarUploadPresignedUrl(
+  fileExtension: string,
+  role: UserRole = "buyer"
+): Promise<{ fileName: string; presignedUrl: string }> {
+  const baseUrl = getAuthServiceBaseUrl();
+  const response = await fetch(`${baseUrl}/user/avatar-url`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      fileExtension,
+      role,
+    }),
+  });
+
+  const resData = await response.json();
+  if (!response.ok) {
+    throw new Error(resData.error || resData.message || "Failed to generate presigned upload URL from Auth-Service");
+  }
+
+  return {
+    fileName: resData.data.fileName,
+    presignedUrl: resData.data.presignedUrl,
+  };
+}
+
+/**
+ * High-level helper: Uploads avatar via Auth-Service presigned URL & S3, then fetches preview presigned URL from Auth-Service
+ */
+export async function uploadAvatarViaAuthService({
+  file,
+  role = "buyer",
+  onProgress,
+}: {
+  file: File;
+  role?: UserRole;
+  onProgress?: (percentage: number) => void;
+}): Promise<{ fileName: string; previewUrl: string }> {
+  const fileNameParts = file.name.split(".");
+  const ext = fileNameParts[fileNameParts.length - 1].toLowerCase();
+
+  // 1. Get presigned upload URL from Auth-Service
+  const { fileName: key, presignedUrl } = await getAuthServiceAvatarUploadPresignedUrl(ext, role);
+
+  // 2. Upload file binary directly to S3
+  await uploadFileToS3(presignedUrl, file, onProgress);
+
+  // 3. Get preview presigned URL from Auth-Service
+  const { preview_url: previewUrl } = await getAuthServicePreviewPresignedUrl(key);
+
+  return { fileName: key, previewUrl };
+}
+
+export function getItemServiceBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_ITEM_SERVICE;
+  if (envUrl) {
+    const formatted = envUrl.startsWith("http") ? envUrl : `http://${envUrl}`;
+    return `${formatted}/api/v1/items`;
+  }
+
+  if (typeof window !== "undefined") {
+    const isGateway = window.location.port === "" || window.location.port === "80";
+    if (isGateway) {
+      return "/api/v1/items";
+    }
+  }
+
+  return "http://localhost:3001/api/v1/items";
+}
+
+/**
+ * Call Item-Service to generate S3 preview presigned URL for a given file key
+ */
+export async function getItemServicePreviewPresignedUrl(
+  fileName: string
+): Promise<GetPresignedUrlPreviewResponse> {
+  const baseUrl = getItemServiceBaseUrl();
+  const response = await fetch(`${baseUrl}/presigned-url/preview`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      file_name: fileName,
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.detail || data.message || "Failed to generate preview presigned URL from Item-Service");
+  }
+
+  return data;
+}
+
 /**
  * High-level helper: Uploads avatar via File-Service & S3, then fetches preview presigned URL from File-Service
  */
@@ -139,3 +280,4 @@ export async function uploadAvatarAndGetPreview({
 
   return { fileName: key, previewUrl };
 }
+

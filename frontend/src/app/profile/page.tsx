@@ -7,7 +7,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { authenticatedFetch } from "@/lib/api";
-import { uploadAvatarAndGetPreview, getPreviewPresignedUrl, UserRole } from "@/lib/fileService";
+import { uploadAvatarViaAuthService, getPreviewPresignedUrl, UserRole } from "@/lib/fileService";
 import { useToast } from "@/components/ui/toast";
 import {
   User,
@@ -113,13 +113,7 @@ function ProfilePageContent() {
         storeLogoUrl: profile.storeLogoUrl || "",
       });
       if (profile.avatarUrl) {
-        if (profile.avatarUrl.startsWith("http")) {
-          setAvatarPreview(profile.avatarUrl);
-        } else {
-          getPreviewPresignedUrl(profile.avatarUrl)
-            .then((res) => setAvatarPreview(res.preview_url))
-            .catch(() => setAvatarPreview(profile.avatarUrl));
-        }
+        setAvatarPreview(profile.avatarUrl);
       }
     }
   }, [profile, form]);
@@ -137,8 +131,8 @@ function ProfilePageContent() {
         throw new Error("Invalid file type. Only jpg, jpeg, png, and webp are allowed.");
       }
 
-      // Upload via File-Service & get preview presigned URL from File-Service
-      const { fileName, previewUrl } = await uploadAvatarAndGetPreview({
+      // Upload via Auth-Service & get preview presigned URL
+      const { fileName, previewUrl } = await uploadAvatarViaAuthService({
         file,
         role: (profile.role || "buyer") as UserRole,
         onProgress: (progress) => setUploadProgress(progress),

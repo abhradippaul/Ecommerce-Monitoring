@@ -42,5 +42,11 @@ export const updateUserSchema = z.object({
   storeDescription: z.string().trim().optional(),
   storeLogoUrl: z.string().trim().optional(),
 });
+export const uploadAvatarUrlSchema = z.object({
+  fileExtension: z.string().min(1, 'File extension is required').trim(),
+  role: z.enum(['admin', 'seller', 'buyer']).default('buyer'),
+});
 
-
+export const previewPresignedUrlSchema = z.object({
+  file_name: z.string().min(1, 'file_name is required').trim(),
+});

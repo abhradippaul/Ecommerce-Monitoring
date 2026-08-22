@@ -1,5 +1,5 @@
 import amqp from 'amqplib';
-const connection = await amqp.connect('amqp://kalo:kalo@localhost');
+const connection = await amqp.connect('amqp://kalo:kalo@192.168.1.203');
 const channel = await connection.createChannel();
 
 async function sendQueueMsg(queue: string, msg: string) {

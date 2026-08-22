@@ -1,7 +1,7 @@
 import User from '../models/user.model.js';
 import type { IUser } from '../models/user.model.js';
 import type { UpdateUserInput, UserRole } from '../utils/types.js';
-import { getAvatarFilePreview } from '../utils/fileGrpcClient.js';
+import { generatePresignedPreviewUrl, generateUploadPresignedUrl } from '../utils/s3Service.js';
 
 export class ProfileService {
   async getProfile(id: string, role: UserRole): Promise<IUser | null> {
@@ -24,7 +24,12 @@ export class ProfileService {
 
   async getAvatarPreviewUrl(fileName: string): Promise<string> {
     if (!fileName) return '';
-    return await getAvatarFilePreview(fileName);
+    return await generatePresignedPreviewUrl(fileName);
+  }
+
+  async getAvatarPresignedUrl(fileName: string, role: string): Promise<{ fileName: string; uploadUrl: string }> {
+    if (!fileName) return { fileName: '', uploadUrl: '' };
+    return await generateUploadPresignedUrl(fileName, role);
   }
 
   async updateProfile(id: string, role: UserRole, data: UpdateUserInput): Promise<IUser | null> {

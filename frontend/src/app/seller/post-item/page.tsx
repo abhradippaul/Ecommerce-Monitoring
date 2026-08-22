@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { authenticatedFetch } from "@/lib/api";
-import { uploadAvatarAndGetPreview } from "@/lib/fileService";
+import { uploadAvatarAndGetPreview, uploadFileToS3, getItemServiceBaseUrl, getItemServicePreviewPresignedUrl } from "@/lib/fileService";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/components/ui/toast";
@@ -137,8 +137,6 @@ export default function PostItemPage() {
     }
   }, [profileData, isLoadingProfile]);
 
-
-
   // Multi-image upload handlers
   const uploadSingleFile = async (file: File, id: string) => {
     try {
@@ -154,27 +152,38 @@ export default function PostItemPage() {
         )
       );
 
-      const { fileName, previewUrl } = await uploadAvatarAndGetPreview({
-        file,
-        role: "seller",
-        onProgress: (percentage) => {
-          setMediaList((prev) =>
-            prev.map((img) =>
-              img.id === id ? { ...img, progress: percentage } : img
-            )
-          );
-        },
+      // 1. Directly fetch presigned upload URL from Item-Service
+      const ITEM_SERVICE_URL = getItemServiceBaseUrl();
+      const presignedRes = await fetch(`${ITEM_SERVICE_URL}/presigned-url?fileExtension=${encodeURIComponent(ext)}`);
+      
+      const presignedData = await presignedRes.json();
+      if (!presignedRes.ok || !presignedData.data?.uploadUrl) {
+        throw new Error(presignedData.error || presignedData.message || "Failed to get presigned upload URL");
+      }
+
+      const { fileName: key, uploadUrl } = presignedData.data;
+
+      // 2. Direct binary upload to S3 via presigned PUT URL
+      await uploadFileToS3(uploadUrl, file, (percentage) => {
+        setMediaList((prev) =>
+          prev.map((img) =>
+            img.id === id ? { ...img, progress: percentage } : img
+          )
+        );
       });
 
-      // Update state to success
+      // 3. Get preview presigned URL from Item-Service
+      const { preview_url: previewUrl } = await getItemServicePreviewPresignedUrl(key);
+
+      // Update state to success with preview URL or key
       setMediaList((prev) => {
         const next = prev.map((img) =>
-          img.id === id ? { ...img, status: "success" as const, s3Url: previewUrl, progress: 100 } : img
+          img.id === id ? { ...img, status: "success" as const, s3Url: key, previewUrl, progress: 100 } : img
         );
-        // Sync with form value
+        // Sync with form value (use previewUrl if available, else s3Url)
         const urls = next
-          .filter((m) => m.status === "success" && m.s3Url)
-          .map((m) => m.s3Url)
+          .filter((m) => m.status === "success" && (m.previewUrl || m.s3Url))
+          .map((m) => m.previewUrl || m.s3Url!)
           .join(", ");
         form.setValue("images", urls, { shouldValidate: true });
         return next;
@@ -220,8 +229,8 @@ export default function PostItemPage() {
     setMediaList((prev) => {
       const next = prev.filter((img) => img.id !== id);
       const urls = next
-        .filter((m) => m.status === "success" && m.s3Url)
-        .map((m) => m.s3Url)
+        .filter((m) => m.status === "success" && (m.previewUrl || m.s3Url))
+        .map((m) => m.previewUrl || m.s3Url!)
         .join(", ");
       form.setValue("images", urls, { shouldValidate: true });
       return next;

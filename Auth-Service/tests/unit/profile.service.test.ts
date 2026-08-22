@@ -14,16 +14,18 @@ jest.unstable_mockModule('../../src/models/user.model.js', () => {
   };
 });
 
-jest.unstable_mockModule('../../src/utils/fileGrpcClient.js', () => ({
-  getAvatarFilePreview: jest.fn(),
+jest.unstable_mockModule('../../src/utils/s3Service.js', () => ({
+  generatePresignedPreviewUrl: jest.fn(),
+  generateUploadPresignedUrl: jest.fn(),
 }));
 
 const { ProfileService } = await import('../../src/services/profile.service.js');
 const UserModule = await import('../../src/models/user.model.js');
-const fileGrpcClientModule = await import('../../src/utils/fileGrpcClient.js');
+const s3ServiceModule = await import('../../src/utils/s3Service.js');
 
 const MockUser = UserModule.default as any;
-const mockGetAvatarFilePreview = fileGrpcClientModule.getAvatarFilePreview as jest.Mock;
+const mockGeneratePresignedPreviewUrl = s3ServiceModule.generatePresignedPreviewUrl as jest.Mock;
+const mockGenerateUploadPresignedUrl = s3ServiceModule.generateUploadPresignedUrl as jest.Mock;
 
 describe('ProfileService', () => {
   let service: InstanceType<typeof ProfileService>;
@@ -76,16 +78,38 @@ describe('ProfileService', () => {
     it('should return empty string if fileName is falsy', async () => {
       const url = await service.getAvatarPreviewUrl('');
       expect(url).toBe('');
-      expect(mockGetAvatarFilePreview).not.toHaveBeenCalled();
+      expect(mockGeneratePresignedPreviewUrl).not.toHaveBeenCalled();
     });
 
-    it('should call getAvatarFilePreview when fileName is provided', async () => {
-      mockGetAvatarFilePreview.mockResolvedValue('http://preview.url/avatar.png');
+    it('should call generatePresignedPreviewUrl when fileName is provided', async () => {
+      mockGeneratePresignedPreviewUrl.mockResolvedValue('http://preview.url/avatar.png');
 
       const url = await service.getAvatarPreviewUrl('avatar.png');
 
-      expect(mockGetAvatarFilePreview).toHaveBeenCalledWith('avatar.png');
+      expect(mockGeneratePresignedPreviewUrl).toHaveBeenCalledWith('avatar.png');
       expect(url).toBe('http://preview.url/avatar.png');
+    });
+  });
+
+  describe('getAvatarPresignedUrl', () => {
+    it('should return empty objects if fileName is empty', async () => {
+      const res = await service.getAvatarPresignedUrl('', 'buyer');
+      expect(res).toEqual({ fileName: '', uploadUrl: '' });
+    });
+
+    it('should call generateUploadPresignedUrl helper when fileName is provided', async () => {
+      mockGenerateUploadPresignedUrl.mockResolvedValue({
+        fileName: 'buyer/avatars/uuid.png',
+        uploadUrl: 'http://s3.amazonaws.com/upload-presigned',
+      });
+
+      const res = await service.getAvatarPresignedUrl('avatar.png', 'buyer');
+
+      expect(mockGenerateUploadPresignedUrl).toHaveBeenCalledWith('avatar.png', 'buyer');
+      expect(res).toEqual({
+        fileName: 'buyer/avatars/uuid.png',
+        uploadUrl: 'http://s3.amazonaws.com/upload-presigned',
+      });
     });
   });
 

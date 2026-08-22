@@ -41,6 +41,7 @@ describe('ItemService', () => {
   describe('getAllItemsPaginated', () => {
     it('should return items with hasNextPage=true when items length exceeds limit', async () => {
       const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         limit: jest.fn().mockResolvedValue([
           { _id: '1', title: 'Item 1' },
@@ -53,6 +54,7 @@ describe('ItemService', () => {
       const result = await service.getAllItemsPaginated(0, 2, 'Electronics');
 
       expect(MockItem.find).toHaveBeenCalledWith({ category: 'Electronics' });
+      expect(mockQuery.sort).toHaveBeenCalledWith({ createdAt: -1 });
       expect(mockQuery.skip).toHaveBeenCalledWith(0);
       expect(mockQuery.limit).toHaveBeenCalledWith(3);
       expect(result.hasNextPage).toBe(true);
@@ -61,6 +63,7 @@ describe('ItemService', () => {
 
     it('should return items with hasNextPage=false when items length is within limit', async () => {
       const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         limit: jest.fn().mockResolvedValue([
           { _id: '1', title: 'Item 1' },
@@ -71,6 +74,7 @@ describe('ItemService', () => {
       const result = await service.getAllItemsPaginated(0, 10);
 
       expect(MockItem.find).toHaveBeenCalledWith({});
+      expect(mockQuery.sort).toHaveBeenCalledWith({ createdAt: -1 });
       expect(result.hasNextPage).toBe(false);
       expect(result.items).toHaveLength(1);
     });

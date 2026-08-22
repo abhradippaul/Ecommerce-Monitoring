@@ -6,6 +6,7 @@ import {
   updateUser,
   deleteUser,
   refresh,
+  uploadAvatarUrl,
 } from '../controllers/auth.controller.js';
 import { authenticateToken, requireRole } from '../middleware/auth.middleware.js';
 import { authRateLimit } from '../middleware/rate-limit.middleware.js';
@@ -333,5 +334,7 @@ router.get('/buyer-only', authenticateToken, requireRole(['buyer']), (req, res) 
 });
 
 router.post('/refresh', authRateLimit, refresh);
+
+router.post('/user/avatar-url', authRateLimit, uploadAvatarUrl);
 
 export default router;

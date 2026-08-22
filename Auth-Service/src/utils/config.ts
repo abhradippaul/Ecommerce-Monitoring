@@ -21,7 +21,9 @@ export const config = {
   serviceVersion: process.env.SERVICE_VERSION || '1.0.0',
   awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
   awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-  awsRegion: process.env.AWS_REGION || '',
+  awsRegion: process.env.AWS_REGION || 'ap-south-1',
+  s3BucketName: process.env.S3_BUCKET_NAME || 'ecommerce-monitoring-dev-s3-bucket',
+  s3AvatarImagesFolder: process.env.S3_AVATAR_IMAGES_FOLDER || 'avatar/images',
   valkeyHost: process.env.VALKEY_HOST || 'localhost',
   valkeyPort: parseInt(process.env.VALKEY_PORT || '6379', 10),
   rateLimit: {
@@ -33,4 +35,9 @@ export const config = {
     httpRequestDurationName: 'http_request_duration_seconds',
     httpRequestDurationHelp: 'Duration of HTTP requests in seconds',
   },
+  jwtPublicKeyFileLocation: process.env.JWT_PUBLIC_KEY_FILE_LOCATION || '',
+  jwtPrivateKeyFileLocation: process.env.JWT_PRIVATE_KEY_FILE_LOCATION || '',
+  jwtPublicKey: process.env.JWT_PUBLIC_KEY || '',
+  jwtPrivateKey: process.env.JWT_PRIVATE_KEY || '',
+  jwtKeyId: process.env.JWT_KEY_ID || '',
 };

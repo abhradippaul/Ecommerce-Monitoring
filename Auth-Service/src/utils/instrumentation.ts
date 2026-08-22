@@ -22,7 +22,7 @@ const sdk = new NodeSDK({
       exporter: new OTLPMetricExporter({
         url: process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT || 'http://localhost:4318/v1/metrics',
       }),
-      exportIntervalMillis: 10000,
+      exportIntervalMillis: 5000,
     }),
   ],
   logRecordProcessors: [

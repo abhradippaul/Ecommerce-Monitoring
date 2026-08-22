@@ -1,6 +1,10 @@
 import User from '../models/user.model.js';
 import type { IUser } from '../models/user.model.js';
 import type { RegisterInput, UpdateUserInput } from '../utils/types.js';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { s3Client } from '../utils/s3Service.js';
+import { config } from '../utils/config.js';
 
 export class AuthService {
   async register(data: RegisterInput): Promise<IUser> {
@@ -47,6 +51,15 @@ export class AuthService {
   async delete(id: string): Promise<boolean> {
     const result = await User.findByIdAndDelete(id);
     return !!result;
+  }
+
+  async getAvatarUploadUrl(params: { fileName: string; expires: number; contentType: string }): Promise<string> {
+    const command = new PutObjectCommand({
+      Bucket: config.s3BucketName,
+      Key: params.fileName,
+      ContentType: params.contentType,
+    });
+    return await getSignedUrl(s3Client, command, { expiresIn: params.expires });
   }
 }
 

@@ -30,6 +30,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3002:3002"
+    depends_on:
+      - rabbitmq
+      - valkey
     env_file:
       - ./Auth-Service/.env
     networks:
@@ -41,6 +44,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3001:3001"
+    depends_on:
+      - rabbitmq
+      - valkey
     env_file:
       - ./Item-Service/.env
     networks:
@@ -64,6 +70,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3003:3003"
+    depends_on:
+      - rabbitmq
+      - valkey
     env_file:
       - ./Order-Service/.env
     networks:
