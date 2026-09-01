@@ -1,7 +1,5 @@
 allowBuilds:
   '@parcel/watcher': false
-  '@scarf/scarf': false
-  esbuild: true
-  grpc-tools: false
+  esbuild: false
   protobufjs: false
   unrs-resolver: false

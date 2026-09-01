@@ -47,10 +47,18 @@ describe('AuthService', () => {
     it('should call User.findOne with $or query', async () => {
       MockUser.findOne.mockResolvedValue({ _id: 'user1', email: 'test@example.com' });
 
-      const user = await service.findByEmailOrUsername('test@example.com', 'testuser', '1234567890');
+      const user = await service.findByEmailOrUsername(
+        'test@example.com',
+        'testuser',
+        '1234567890'
+      );
 
       expect(MockUser.findOne).toHaveBeenCalledWith({
-        $or: [{ email: 'test@example.com' }, { username: 'testuser' }, { phoneNumber: '1234567890' }],
+        $or: [
+          { email: 'test@example.com' },
+          { username: 'testuser' },
+          { phoneNumber: '1234567890' },
+        ],
       });
       expect(user).toEqual({ _id: 'user1', email: 'test@example.com' });
     });

@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { infoService } from '../services/info.service.js';
-import logger from '../logger/index.js';
+import logger from '../utils/logger.js';
 
 export const getInfo = (req: Request, res: Response) => {
   logger.info('Info requested');

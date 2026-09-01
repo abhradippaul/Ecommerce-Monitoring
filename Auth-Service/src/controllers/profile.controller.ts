@@ -42,7 +42,7 @@ export const getProfile = async (req: Request, res: Response) => {
         data: {
           ...user.toObject(),
           avatarUrl: avatarPreviewUrl || user.avatarUrl,
-        }
+        },
       });
     } catch (err: any) {
       const statusCode = err instanceof HttpError ? err.statusCode : 500;
@@ -115,7 +115,7 @@ export const getDetailedProfile = async (req: Request, res: Response) => {
           lastName: user.lastName,
           avatar: finalAvatar,
           avatarUrl: finalAvatar,
-        }
+        },
       });
     } catch (err: any) {
       const statusCode = err instanceof HttpError ? err.statusCode : 500;
@@ -334,10 +334,17 @@ export const getAvatarPresignedUrl = async (req: Request, res: Response) => {
         throw new HttpError(401, 'Unauthorized: Missing authentication context', 'unauthorized');
       }
 
-      const fileExtension = (req.query.fileExtension as string) || (req.query.extension as string) || (req.query.fileName as string);
+      const fileExtension =
+        (req.query.fileExtension as string) ||
+        (req.query.extension as string) ||
+        (req.query.fileName as string);
       if (!fileExtension) {
         validationErrorCounter.add(1, { error_type: 'missing_filename' });
-        throw new HttpError(400, 'fileExtension or fileName query parameter is required', 'missing_filename');
+        throw new HttpError(
+          400,
+          'fileExtension or fileName query parameter is required',
+          'missing_filename'
+        );
       }
 
       const result = await profileService.getAvatarPresignedUrl(fileExtension, authUser.role);
@@ -402,7 +409,11 @@ export const getPreviewPresignedUrl = async (req: Request, res: Response) => {
       const preview_url = await profileService.getAvatarPreviewUrl(file_name);
 
       if (!preview_url) {
-        throw new HttpError(500, 'Failed to generate presigned preview URL', 'presigned_url_failed');
+        throw new HttpError(
+          500,
+          'Failed to generate presigned preview URL',
+          'presigned_url_failed'
+        );
       }
 
       logger.info(`Preview presigned URL generated for file: ${file_name}`, {

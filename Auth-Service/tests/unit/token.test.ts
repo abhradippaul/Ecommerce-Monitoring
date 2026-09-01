@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, afterAll } from '@jest/globals';
-import { generateAccessToken, generateRefreshToken, verifyAccessToken, verifyRefreshToken } from '../../src/utils/token.js';
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyAccessToken,
+  verifyRefreshToken,
+} from '../../src/utils/token.js';
 import { config } from '../../src/utils/config.js';
 
 describe('Token Utils', () => {

@@ -5,8 +5,7 @@ import healthRoutes from './routes/health.routes.js';
 import infoRoutes from './routes/info.routes.js';
 import itemRoutes from './routes/item.routes.js';
 import categoryRoutes from './routes/category.routes.js';
-import logger from './logger/index.js';
-import { config } from './utils/config.js';
+import logger from './utils/logger.js';
 
 const app: Express = express();
 

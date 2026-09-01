@@ -1,5 +1,12 @@
 import { Router } from 'express';
-import { getProfile, getDetailedProfile, updateProfile, deleteProfile, getAvatarPresignedUrl, getPreviewPresignedUrl } from '../controllers/profile.controller.js';
+import {
+  getProfile,
+  getDetailedProfile,
+  updateProfile,
+  deleteProfile,
+  getAvatarPresignedUrl,
+  getPreviewPresignedUrl,
+} from '../controllers/profile.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authRateLimit } from '../middleware/rate-limit.middleware.js';
 

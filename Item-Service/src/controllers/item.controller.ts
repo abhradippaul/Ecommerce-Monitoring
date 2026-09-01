@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { itemService } from '../services/item.service.js';
-import logger from '../logger/index.js';
+import logger from '../utils/logger.js';
 import { itemSchema } from '../schemas/item.schema.js';
 import { ZodError } from 'zod';
 

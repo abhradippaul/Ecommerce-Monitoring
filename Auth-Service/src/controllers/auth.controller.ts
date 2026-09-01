@@ -35,7 +35,11 @@ export const register = async (req: Request, res: Response) => {
       });
 
       const existingUser = await withSpan('register.checkExistingUser', () =>
-        authService.findByEmailOrUsername(validatedData.email, validatedData.username, validatedData.phoneNumber)
+        authService.findByEmailOrUsername(
+          validatedData.email,
+          validatedData.username,
+          validatedData.phoneNumber
+        )
       );
 
       if (existingUser) {
@@ -348,8 +352,6 @@ export const updateUser = async (req: Request, res: Response) => {
   });
 };
 
-
-
 export const deleteUser = async (req: Request, res: Response) => {
   const start = Date.now();
   const route = req.route ? `${req.baseUrl}${req.route.path}` : req.originalUrl;
@@ -584,4 +586,3 @@ export const uploadAvatarUrl = async (req: Request, res: Response) => {
     }
   });
 };
-

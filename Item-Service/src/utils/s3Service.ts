@@ -1,7 +1,7 @@
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { config } from './config.js';
-import logger from '../logger/index.js';
+import logger from './logger.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export const s3Client = new S3Client({

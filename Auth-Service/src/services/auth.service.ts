@@ -12,7 +12,11 @@ export class AuthService {
     return await user.save();
   }
 
-  async findByEmailOrUsername(email: string, username: string, phoneNumber: string): Promise<IUser | null> {
+  async findByEmailOrUsername(
+    email: string,
+    username: string,
+    phoneNumber: string
+  ): Promise<IUser | null> {
     return await User.findOne({ $or: [{ email }, { username }, { phoneNumber }] });
   }
 
@@ -53,7 +57,11 @@ export class AuthService {
     return !!result;
   }
 
-  async getAvatarUploadUrl(params: { fileName: string; expires: number; contentType: string }): Promise<string> {
+  async getAvatarUploadUrl(params: {
+    fileName: string;
+    expires: number;
+    contentType: string;
+  }): Promise<string> {
     const command = new PutObjectCommand({
       Bucket: config.s3BucketName,
       Key: params.fileName,

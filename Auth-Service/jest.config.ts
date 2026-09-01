@@ -16,12 +16,7 @@ const config: JestConfigWithTsJest = {
     ],
   },
   coverageDirectory: 'coverage',
-  collectCoverageFrom: [
-    'src/**/*.ts',
-    '!src/**/*.d.ts',
-    '!src/index.ts',
-    '!src/server.ts',
-  ],
+  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/index.ts', '!src/server.ts'],
   injectGlobals: true,
 };
 

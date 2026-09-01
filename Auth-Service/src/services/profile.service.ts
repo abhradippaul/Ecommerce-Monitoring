@@ -27,7 +27,10 @@ export class ProfileService {
     return await generatePresignedPreviewUrl(fileName);
   }
 
-  async getAvatarPresignedUrl(fileName: string, role: string): Promise<{ fileName: string; uploadUrl: string }> {
+  async getAvatarPresignedUrl(
+    fileName: string,
+    role: string
+  ): Promise<{ fileName: string; uploadUrl: string }> {
     if (!fileName) return { fileName: '', uploadUrl: '' };
     return await generateUploadPresignedUrl(fileName, role);
   }

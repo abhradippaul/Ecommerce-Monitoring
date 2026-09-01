@@ -1,16 +1,4 @@
-import app from './app.js';
-import logger from './logger/index.js';
-import { config } from './utils/config.js';
-import { connectDB } from './config/db.js';
+import sdk from './utils/instrumentation.js';
+sdk.start();
 
-const PORT = config.port;
-
-const startServer = async () => {
-  await connectDB();
-
-  app.listen(PORT, () => {
-    logger.info(`Item Service is running in ${config.nodeEnv} environment on http://localhost:${PORT}`);
-  });
-};
-
-startServer();
+import('./server.js');

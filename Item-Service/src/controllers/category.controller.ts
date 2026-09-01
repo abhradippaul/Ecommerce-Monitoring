@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { categoryService } from '../services/category.service.js';
-import logger from '../logger/index.js';
+import logger from '../utils/logger.js';
 import { categorySchema } from '../schemas/category.schema.js';
 import { ZodError } from 'zod';
 

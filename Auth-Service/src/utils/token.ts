@@ -32,7 +32,10 @@ const generateAccessToken = (user: TokenUser) => {
     { id: user.id.toString(), role: user.role } satisfies AccessTokenPayload,
     PRIVATE_KEY,
     {
-      expiresIn: config.accessTokenExpiry as NonNullable<SignOptions['expiresIn']>, issuer: 'auth-service', algorithm: 'ES256', keyid: KEY_ID
+      expiresIn: config.accessTokenExpiry as NonNullable<SignOptions['expiresIn']>,
+      issuer: 'auth-service',
+      algorithm: 'ES256',
+      keyid: KEY_ID,
     }
   );
 };

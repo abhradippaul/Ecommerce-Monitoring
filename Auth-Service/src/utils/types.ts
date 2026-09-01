@@ -28,8 +28,6 @@ export interface AuthenticatedRequest extends Request {
   user?: AuthUser;
 }
 
-
-
 export interface RateLimitOptions {
   windowMs: number;
   max: number;

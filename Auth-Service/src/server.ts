@@ -13,12 +13,12 @@ const startServer = async () => {
     await connectDB();
     logger.info('Auth Service is initializing...');
 
-    valkey.on('error', (err) => {
+    valkey.on('error', err => {
       logger.error('Valkey connection error:', err);
     });
 
     valkey.on('ready', () => {
-      console.log("hello")
+      console.log('hello');
       logger.info('Valkey connected');
     });
 

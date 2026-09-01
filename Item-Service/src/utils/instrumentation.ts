@@ -20,7 +20,7 @@ diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.INFO);
 
 const sdk = new NodeSDK({
   resource: resourceFromAttributes({
-    [ATTR_SERVICE_NAME]: 'auth-service',
+    [ATTR_SERVICE_NAME]: 'item-service',
     [ATTR_SERVICE_VERSION]: '0.1.0',
   }),
   traceExporter: new OTLPTraceExporter({
@@ -37,10 +37,11 @@ const sdk = new NodeSDK({
   logRecordProcessors: [
     new SimpleLogRecordProcessor({ exporter: new ConsoleLogRecordExporter() }),
     new BatchLogRecordProcessor({
-      exporter: new OTLPLogExporter({ url: 'http://localhost:4318/v1/logs' }),
+      exporter: new OTLPLogExporter({ url: process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT || 'http://localhost:4318/v1/logs' }),
     }),
   ],
   instrumentations: [getNodeAutoInstrumentations(), new WinstonInstrumentation()],
 });
 
 export default sdk;
+

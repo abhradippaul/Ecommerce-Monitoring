@@ -16,7 +16,10 @@ export const s3Client = new S3Client({
     : {}),
 });
 
-export const generatePresignedPreviewUrl = async (key: string, expiresIn = 3600): Promise<string> => {
+export const generatePresignedPreviewUrl = async (
+  key: string,
+  expiresIn = 3600
+): Promise<string> => {
   if (!key) return '';
   try {
     const command = new GetObjectCommand({
