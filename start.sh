@@ -1,1 +1,1 @@
-docker compose -f docker-compose.apps.yaml up valkey rabbitmq auth -d
+docker compose up valkey rabbitmq -d

@@ -10,10 +10,12 @@ import logger from '../utils/logger.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/token.js';
 import type { AuthenticatedRequest } from '../utils/types.js';
 import { latencyHistogram, requestCounter, validationErrorCounter } from '../utils/metrics.js';
-import { withSpan } from '../utils/traces.js';
+import { withSpan, withHttpSpan } from '../utils/traces.js';
+import { ATTR_ERROR_TYPE } from '@opentelemetry/semantic-conventions';
 import { HttpError } from '../utils/error.js';
 import { v4 as uuid } from 'uuid';
 import { formatZodError } from '../utils/zod.js';
+import { simulateSlowness } from '../utils/slowness.js';
 
 export const register = async (req: Request, res: Response) => {
   const start = Date.now();
@@ -21,10 +23,12 @@ export const register = async (req: Request, res: Response) => {
   const httpMethod = req.method;
   requestCounter.add(1, { route, http_method: httpMethod });
 
-  await withSpan('register', async span => {
+  await withHttpSpan('register', req, res, async span => {
     const traceId = span.spanContext().traceId;
 
     try {
+      await simulateSlowness('register.simulateTrafficSlowness');
+
       const validatedData = await withSpan('register.schemaValidation', async () => {
         const result = registerSchema.safeParse(req.body);
         if (!result.success) {
@@ -82,6 +86,7 @@ export const register = async (req: Request, res: Response) => {
         },
       });
     } catch (err: any) {
+      span.setAttribute(ATTR_ERROR_TYPE, err.errorType ?? err.name ?? 'Error');
       const statusCode = err instanceof HttpError ? err.statusCode : 500;
       const logPayload = {
         reason: err.errorType ?? 'unexpected',
@@ -116,10 +121,12 @@ export const login = async (req: Request, res: Response) => {
   const httpMethod = req.method;
   requestCounter.add(1, { route, http_method: httpMethod });
 
-  await withSpan('login', async span => {
+  await withHttpSpan('login', req, res, async span => {
     const traceId = span.spanContext().traceId;
 
     try {
+      await simulateSlowness('login.simulateTrafficSlowness');
+
       const validatedData = await withSpan('login.schemaValidation', async () => {
         const result = loginSchema.safeParse(req.body);
         if (!result.success) {
@@ -187,6 +194,7 @@ export const login = async (req: Request, res: Response) => {
         },
       });
     } catch (err: any) {
+      span.setAttribute(ATTR_ERROR_TYPE, err.errorType ?? err.name ?? 'Error');
       const statusCode = err instanceof HttpError ? err.statusCode : 500;
       const logPayload = {
         reason: err.errorType ?? 'unexpected',
@@ -218,9 +226,10 @@ export const logout = async (req: Request, res: Response) => {
   const httpMethod = req.method;
   requestCounter.add(1, { route, http_method: httpMethod });
 
-  await withSpan('logout', async span => {
+  await withHttpSpan('logout', req, res, async span => {
     const traceId = span.spanContext().traceId;
     try {
+      await simulateSlowness('logout.simulateTrafficSlowness');
       logger.info('User logged out', {
         trace_id: traceId,
         route,
@@ -237,6 +246,7 @@ export const logout = async (req: Request, res: Response) => {
         message: 'Logged out successfully',
       });
     } catch (err: any) {
+      span.setAttribute(ATTR_ERROR_TYPE, err.errorType ?? err.name ?? 'Error');
       const statusCode = err instanceof HttpError ? err.statusCode : 500;
       const logPayload = {
         reason: err.errorType ?? 'unexpected',
@@ -267,10 +277,11 @@ export const updateUser = async (req: Request, res: Response) => {
   const httpMethod = req.method;
   requestCounter.add(1, { route, http_method: httpMethod });
 
-  await withSpan('updateUser', async span => {
+  await withHttpSpan('updateUser', req, res, async span => {
     const traceId = span.spanContext().traceId;
 
     try {
+      await simulateSlowness('updateUser.simulateTrafficSlowness');
       const { id } = req.params;
       if (!id) {
         validationErrorCounter.add(1, { error_type: 'missing_id' });
@@ -324,6 +335,7 @@ export const updateUser = async (req: Request, res: Response) => {
         data: user,
       });
     } catch (err: any) {
+      span.setAttribute(ATTR_ERROR_TYPE, err.errorType ?? err.name ?? 'Error');
       const statusCode = err instanceof HttpError ? err.statusCode : 400;
       const logPayload = {
         reason: err.errorType ?? 'unexpected',
@@ -358,10 +370,11 @@ export const deleteUser = async (req: Request, res: Response) => {
   const httpMethod = req.method;
   requestCounter.add(1, { route, http_method: httpMethod });
 
-  await withSpan('deleteUser', async span => {
+  await withHttpSpan('deleteUser', req, res, async span => {
     const traceId = span.spanContext().traceId;
 
     try {
+      await simulateSlowness('deleteUser.simulateTrafficSlowness');
       const { id } = req.params;
       if (!id) {
         validationErrorCounter.add(1, { error_type: 'missing_id' });
@@ -403,6 +416,7 @@ export const deleteUser = async (req: Request, res: Response) => {
         message: 'User deleted successfully',
       });
     } catch (err: any) {
+      span.setAttribute(ATTR_ERROR_TYPE, err.errorType ?? err.name ?? 'Error');
       const statusCode = err instanceof HttpError ? err.statusCode : 400;
       const logPayload = {
         reason: err.errorType ?? 'unexpected',
@@ -437,10 +451,11 @@ export const refresh = async (req: Request, res: Response) => {
   const httpMethod = req.method;
   requestCounter.add(1, { route, http_method: httpMethod });
 
-  await withSpan('refresh', async span => {
+  await withHttpSpan('refresh', req, res, async span => {
     const traceId = span.spanContext().traceId;
 
     try {
+      await simulateSlowness('refresh.simulateTrafficSlowness');
       const { refresh_token } = req.body;
       if (!refresh_token) {
         validationErrorCounter.add(1, { error_type: 'missing_refresh_token' });
@@ -480,6 +495,7 @@ export const refresh = async (req: Request, res: Response) => {
         },
       });
     } catch (err: any) {
+      span.setAttribute(ATTR_ERROR_TYPE, err.errorType ?? err.name ?? 'Error');
       const statusCode = err instanceof HttpError ? err.statusCode : 403;
       const logPayload = {
         reason: err.errorType ?? 'unexpected',
@@ -514,10 +530,11 @@ export const uploadAvatarUrl = async (req: Request, res: Response) => {
   const httpMethod = req.method;
   requestCounter.add(1, { route, http_method: httpMethod });
 
-  await withSpan('uploadAvatarUrl', async span => {
+  await withHttpSpan('uploadAvatarUrl', req, res, async span => {
     const traceId = span.spanContext().traceId;
 
     try {
+      await simulateSlowness('uploadAvatarUrl.simulateTrafficSlowness');
       const validatedData = await withSpan('uploadAvatarUrl.schemaValidation', async () => {
         const result = uploadAvatarUrlSchema.safeParse(req.body);
         if (!result.success) {
@@ -559,6 +576,7 @@ export const uploadAvatarUrl = async (req: Request, res: Response) => {
         },
       });
     } catch (err: any) {
+      span.setAttribute(ATTR_ERROR_TYPE, err.errorType ?? err.name ?? 'Error');
       const statusCode = err instanceof HttpError ? err.statusCode : 400;
       const logPayload = {
         reason: err.errorType ?? 'unexpected',

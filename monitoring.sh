@@ -1,1 +1,1 @@
-docker compose -f docker-compose.monitoring.yaml up -d
+docker compose up -d otel-collector prometheus tempo loki grafana

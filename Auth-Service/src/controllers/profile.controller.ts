@@ -4,9 +4,11 @@ import { updateUserSchema, previewPresignedUrlSchema } from '../schemas/user.sch
 import logger from '../utils/logger.js';
 import type { AuthenticatedRequest } from '../utils/types.js';
 import { latencyHistogram, requestCounter, validationErrorCounter } from '../utils/metrics.js';
-import { withSpan } from '../utils/traces.js';
+import { withSpan, withHttpSpan } from '../utils/traces.js';
+import { ATTR_ERROR_TYPE } from '@opentelemetry/semantic-conventions';
 import { HttpError } from '../utils/error.js';
 import { formatZodError } from '../utils/zod.js';
+import { simulateSlowness } from '../utils/slowness.js';
 
 export const getProfile = async (req: Request, res: Response) => {
   const start = Date.now();
@@ -14,10 +16,11 @@ export const getProfile = async (req: Request, res: Response) => {
   const httpMethod = req.method;
   requestCounter.add(1, { route, http_method: httpMethod });
 
-  await withSpan('getProfile', async span => {
+  await withHttpSpan('getProfile', req, res, async span => {
     const traceId = span.spanContext().traceId;
 
     try {
+      await simulateSlowness('getProfile.simulateTrafficSlowness');
       const authUser = (req as AuthenticatedRequest).user;
       if (!authUser) {
         validationErrorCounter.add(1, { error_type: 'unauthorized' });
@@ -45,6 +48,7 @@ export const getProfile = async (req: Request, res: Response) => {
         },
       });
     } catch (err: any) {
+      span.setAttribute(ATTR_ERROR_TYPE, err.errorType ?? err.name ?? 'Error');
       const statusCode = err instanceof HttpError ? err.statusCode : 500;
       const logPayload = {
         reason: err.errorType ?? 'unexpected',
@@ -79,10 +83,11 @@ export const getDetailedProfile = async (req: Request, res: Response) => {
   const httpMethod = req.method;
   requestCounter.add(1, { route, http_method: httpMethod });
 
-  await withSpan('getDetailedProfile', async span => {
+  await withHttpSpan('getDetailedProfile', req, res, async span => {
     const traceId = span.spanContext().traceId;
 
     try {
+      await simulateSlowness('getDetailedProfile.simulateTrafficSlowness');
       const authUser = (req as AuthenticatedRequest).user;
       if (!authUser) {
         validationErrorCounter.add(1, { error_type: 'unauthorized' });
@@ -118,6 +123,7 @@ export const getDetailedProfile = async (req: Request, res: Response) => {
         },
       });
     } catch (err: any) {
+      span.setAttribute(ATTR_ERROR_TYPE, err.errorType ?? err.name ?? 'Error');
       const statusCode = err instanceof HttpError ? err.statusCode : 500;
       const logPayload = {
         reason: err.errorType ?? 'unexpected',
@@ -152,10 +158,11 @@ export const updateProfile = async (req: Request, res: Response) => {
   const httpMethod = req.method;
   requestCounter.add(1, { route, http_method: httpMethod });
 
-  await withSpan('updateProfile', async span => {
+  await withHttpSpan('updateProfile', req, res, async span => {
     const traceId = span.spanContext().traceId;
 
     try {
+      await simulateSlowness('updateProfile.simulateTrafficSlowness');
       const { id } = req.params;
       if (!id) {
         validationErrorCounter.add(1, { error_type: 'missing_id' });
@@ -209,6 +216,7 @@ export const updateProfile = async (req: Request, res: Response) => {
         data: user,
       });
     } catch (err: any) {
+      span.setAttribute(ATTR_ERROR_TYPE, err.errorType ?? err.name ?? 'Error');
       const statusCode = err instanceof HttpError ? err.statusCode : 400;
       const logPayload = {
         reason: err.errorType ?? 'unexpected',
@@ -243,10 +251,11 @@ export const deleteProfile = async (req: Request, res: Response) => {
   const httpMethod = req.method;
   requestCounter.add(1, { route, http_method: httpMethod });
 
-  await withSpan('deleteProfile', async span => {
+  await withHttpSpan('deleteProfile', req, res, async span => {
     const traceId = span.spanContext().traceId;
 
     try {
+      await simulateSlowness('deleteProfile.simulateTrafficSlowness');
       const { id } = req.params;
       if (!id) {
         validationErrorCounter.add(1, { error_type: 'missing_id' });
@@ -290,6 +299,7 @@ export const deleteProfile = async (req: Request, res: Response) => {
         message: 'Profile deleted successfully',
       });
     } catch (err: any) {
+      span.setAttribute(ATTR_ERROR_TYPE, err.errorType ?? err.name ?? 'Error');
       const statusCode = err instanceof HttpError ? err.statusCode : 400;
       const logPayload = {
         reason: err.errorType ?? 'unexpected',
@@ -324,10 +334,11 @@ export const getAvatarPresignedUrl = async (req: Request, res: Response) => {
   const httpMethod = req.method;
   requestCounter.add(1, { route, http_method: httpMethod });
 
-  await withSpan('getAvatarPresignedUrl', async span => {
+  await withHttpSpan('getAvatarPresignedUrl', req, res, async span => {
     const traceId = span.spanContext().traceId;
 
     try {
+      await simulateSlowness('getAvatarPresignedUrl.simulateTrafficSlowness');
       const authUser = (req as AuthenticatedRequest).user;
       if (!authUser) {
         validationErrorCounter.add(1, { error_type: 'unauthorized' });
@@ -358,6 +369,7 @@ export const getAvatarPresignedUrl = async (req: Request, res: Response) => {
         data: result,
       });
     } catch (err: any) {
+      span.setAttribute(ATTR_ERROR_TYPE, err.errorType ?? err.name ?? 'Error');
       const statusCode = err instanceof HttpError ? err.statusCode : 500;
       const logPayload = {
         reason: err.errorType ?? 'unexpected',
@@ -392,10 +404,11 @@ export const getPreviewPresignedUrl = async (req: Request, res: Response) => {
   const httpMethod = req.method;
   requestCounter.add(1, { route, http_method: httpMethod });
 
-  await withSpan('getPreviewPresignedUrl', async span => {
+  await withHttpSpan('getPreviewPresignedUrl', req, res, async span => {
     const traceId = span.spanContext().traceId;
 
     try {
+      await simulateSlowness('getPreviewPresignedUrl.simulateTrafficSlowness');
       const validatedData = await withSpan('getPreviewPresignedUrl.schemaValidation', async () => {
         const result = previewPresignedUrlSchema.safeParse(req.body);
         if (!result.success) {
@@ -434,6 +447,7 @@ export const getPreviewPresignedUrl = async (req: Request, res: Response) => {
         preview_url,
       });
     } catch (err: any) {
+      span.setAttribute(ATTR_ERROR_TYPE, err.errorType ?? err.name ?? 'Error');
       const statusCode = err instanceof HttpError ? err.statusCode : 400;
       const logPayload = {
         reason: err.errorType ?? 'unexpected',
