@@ -1,1 +1,1 @@
-docker compose up valkey rabbitmq -d
+docker compose up valkey rabbitmq nginx auth item order frontend -d

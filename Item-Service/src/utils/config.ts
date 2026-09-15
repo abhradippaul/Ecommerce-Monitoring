@@ -16,4 +16,9 @@ export const config = {
   awsRegion: process.env.AWS_REGION || 'ap-south-1',
   s3BucketName: process.env.S3_BUCKET_NAME || 'ecommerce-monitoring-dev-s3-bucket',
   s3ProductImagesFolder: process.env.S3_PRODUCT_IMAGES_FOLDER || 'product/images',
+  otelServiceName: process.env.OTEL_SERVICE_NAME || 'item-service',
+  otelServiceVersion: process.env.OTEL_SERVICE_VERSION || '0.1.0',
+  otelExporterOtlpTracesEndpoint: process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || 'http://localhost:4318/v1/traces',
+  otelExporterOtlpMetricsEndpoint: process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT || 'http://localhost:4318/v1/metrics',
+  otelExporterOtlpLogsEndpoint: process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT || 'http://localhost:4318/v1/logs',
 };

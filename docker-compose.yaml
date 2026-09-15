@@ -37,6 +37,8 @@ services:
       - valkey
     env_file:
       - ./Auth-Service/.env
+    volumes:
+      - ./Auth-Service/keys:/app/keys:ro
     networks:
       - ecommerce-monitoring
 
@@ -51,6 +53,8 @@ services:
       - valkey
     env_file:
       - ./Item-Service/.env
+    volumes:
+      - ./Item-Service/keys:/app/keys:ro
     networks:
       - ecommerce-monitoring
 
@@ -77,6 +81,8 @@ services:
       - valkey
     env_file:
       - ./Order-Service/.env
+    volumes:
+      - ./Order-Service/keys:/app/keys:ro
     networks:
       - ecommerce-monitoring
 

@@ -31,13 +31,12 @@ export const config = {
     max: parseInt(process.env.RATE_LIMIT_MAX || '50', 10),
     keyPrefix: process.env.RATE_LIMIT_KEY_PREFIX || 'rl',
   },
-  metrics: {
-    httpRequestDurationName: 'http_request_duration_seconds',
-    httpRequestDurationHelp: 'Duration of HTTP requests in seconds',
-  },
   jwtPublicKeyFileLocation: process.env.JWT_PUBLIC_KEY_FILE_LOCATION || '',
   jwtPrivateKeyFileLocation: process.env.JWT_PRIVATE_KEY_FILE_LOCATION || '',
   jwtPublicKey: process.env.JWT_PUBLIC_KEY || '',
   jwtPrivateKey: process.env.JWT_PRIVATE_KEY || '',
   jwtKeyId: process.env.JWT_KEY_ID || '',
+  otelExporterOtlpTracesEndpoint: process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || 'http://localhost:4318/v1/traces',
+  otelExporterOtlpMetricsEndpoint: process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT || 'http://localhost:4318/v1/metrics',
+  otelExporterOtlpLogsEndpoint: process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT || 'http://localhost:4318/v1/logs',
 };
