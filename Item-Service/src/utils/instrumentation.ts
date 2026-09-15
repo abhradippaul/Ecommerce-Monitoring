@@ -14,30 +14,31 @@ import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';
 import { WinstonInstrumentation } from '@opentelemetry/instrumentation-winston';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
+import { config } from './config.js';
 
 // Optional: Enable internal diagnostic logging for troubleshooting OTel itself
 diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.INFO);
 
 const sdk = new NodeSDK({
   resource: resourceFromAttributes({
-    [ATTR_SERVICE_NAME]: 'item-service',
-    [ATTR_SERVICE_VERSION]: '0.1.0',
+    [ATTR_SERVICE_NAME]: config.otelServiceName,
+    [ATTR_SERVICE_VERSION]: config.otelServiceVersion,
   }),
   traceExporter: new OTLPTraceExporter({
-    url: process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || 'http://localhost:4318/v1/traces',
+    url: config.otelExporterOtlpTracesEndpoint,
   }),
   metricReaders: [
     new PeriodicExportingMetricReader({
       exporter: new OTLPMetricExporter({
-        url: process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT || 'http://localhost:4318/v1/metrics',
+        url: config.otelExporterOtlpMetricsEndpoint,
       }),
-      exportIntervalMillis: 5000,
+      exportIntervalMillis: 1000,
     }),
   ],
   logRecordProcessors: [
     new SimpleLogRecordProcessor({ exporter: new ConsoleLogRecordExporter() }),
     new BatchLogRecordProcessor({
-      exporter: new OTLPLogExporter({ url: process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT || 'http://localhost:4318/v1/logs' }),
+      exporter: new OTLPLogExporter({ url: config.otelExporterOtlpLogsEndpoint }),
     }),
   ],
   instrumentations: [getNodeAutoInstrumentations(), new WinstonInstrumentation()],

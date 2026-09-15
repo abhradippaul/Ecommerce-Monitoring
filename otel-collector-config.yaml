@@ -19,8 +19,8 @@ exporters:
     verbosity: detailed
   prometheus:
     endpoint: 0.0.0.0:8889
-  otlphttp/tempo:
-    endpoint: tempo:4318
+  otlp/tempo:
+    endpoint: tempo:4317
     tls:
       insecure: true
   otlphttp/loki:
@@ -41,7 +41,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlphttp/tempo]
+      exporters: [otlp/tempo]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]

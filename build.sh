@@ -1,1 +1,1 @@
-docker compose -f docker-compose.apps.yaml up valkey rabbitmq auth item frontend nginx -d --build
+docker compose up valkey rabbitmq nginx auth item order frontend -d --build

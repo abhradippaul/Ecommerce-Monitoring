@@ -44,7 +44,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 app.get('/api/v1/auth/info', (req: Request, res: Response) => {
-  requestCounter.add(1, { route: '/api/v1/auth/info' });
+  requestCounter.add(1, { route: '/api/v1/auth/info', http_method: 'GET' });
   return res.status(200).json({
     message: 'Auth Service is running',
     data: {
@@ -56,8 +56,8 @@ app.get('/api/v1/auth/info', (req: Request, res: Response) => {
 });
 
 app.get('/api/v1/auth/health', async (req: Request, res: Response) => {
-  requestCounter.add(1, { route: '/api/v1/auth/health' });
-  await sendQueueMsg('hello', 'hello world');
+  requestCounter.add(1, { route: '/api/v1/auth/health', http_method: 'GET' });
+  // await sendQueueMsg('hello', 'hello world');
   return res.status(200).json({
     message: 'Successfully fetched health status',
     data: {
