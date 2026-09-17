@@ -83,6 +83,9 @@ jobs:
     name: Terraform
     needs: detect-changes
     if: needs.detect-changes.outputs.terraform == 'true'
+    strategy:
+      matrix:
+        stack: [Terraform]
     uses: ./.github/workflows/terraform-ci.yaml
     secrets: inherit
 
