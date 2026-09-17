@@ -42,32 +42,15 @@ export const activeRequestsCounter: UpDownCounter = meter.createUpDownCounter('h
 });
 
 // ---------------------------------------------------------------------------
-// Authentication & Security Domain Metrics
+// Item Management & Business Domain Metrics
 // ---------------------------------------------------------------------------
 
 /**
- * Tracks business authentication attempts and outcomes.
- * Essential for detecting credential stuffing, brute force attacks, and login surges.
- * Labels: action ('login' | 'register' | 'refresh' | 'token_verify'), status ('success' | 'failure'), reason
+ * Tracks item inventory and category operations (create, update, delete, get, list).
+ * Labels: action, status ('success' | 'failure')
  */
-export const authAttemptsCounter: Counter = meter.createCounter('auth.attempts.total', {
-  description: 'Total authentication attempts partitioned by action, status, and failure reason',
-});
-
-/**
- * Tracks JWT token lifecycle events (generation and validation).
- * Labels: operation ('sign' | 'verify' | 'refresh'), token_type ('access' | 'refresh'), status ('success' | 'failure')
- */
-export const tokenOperationsCounter: Counter = meter.createCounter('auth.token.operations.total', {
-  description: 'Total token operations (signing, verification, refreshing)',
-});
-
-/**
- * Tracks rate-limiting throttling events (HTTP 429).
- * Labels: route, key_prefix
- */
-export const rateLimitCounter: Counter = meter.createCounter('auth.rate_limit.exceeded.total', {
-  description: 'Total rate limit exceeded events triggered across endpoints',
+export const itemOperationsCounter: Counter = meter.createCounter('item.operations.total', {
+  description: 'Total item operations partitioned by action and status',
 });
 
 /**
@@ -79,14 +62,14 @@ export const validationErrorCounter: Counter = meter.createCounter('validation.e
 });
 
 // ---------------------------------------------------------------------------
-// Downstream Dependency Health (Database, Cache, Object Storage)
+// Downstream Dependency Health (MongoDB, AWS S3)
 // ---------------------------------------------------------------------------
 
 /**
- * Tracks duration of external dependency calls (MongoDB, Valkey, S3, RabbitMQ).
+ * Tracks duration of external dependency calls (MongoDB, S3).
  * Labels: dependency, operation, status ('success' | 'error')
  */
-export const dependencyDurationHistogram: Histogram = meter.createHistogram('auth.dependency.duration', {
+export const dependencyDurationHistogram: Histogram = meter.createHistogram('item.dependency.duration', {
   description: 'Duration of downstream dependency operations in milliseconds',
   unit: 'ms',
 });
@@ -95,7 +78,7 @@ export const dependencyDurationHistogram: Histogram = meter.createHistogram('aut
  * Tracks dependency failures.
  * Labels: dependency, operation
  */
-export const dependencyErrorsCounter: Counter = meter.createCounter('auth.dependency.errors.total', {
+export const dependencyErrorsCounter: Counter = meter.createCounter('item.dependency.errors.total', {
   description: 'Total downstream dependency failures',
 });
 
@@ -156,24 +139,11 @@ rssGauge.addCallback(observableResult => {
 // Production Helper Functions for SRE Instrumentation
 // ---------------------------------------------------------------------------
 
-export const recordAuthAttempt = (
-  action: 'login' | 'register' | 'refresh' | 'token_verify',
-  status: 'success' | 'failure',
-  reason: string = 'none'
-) => {
-  authAttemptsCounter.add(1, { action, status, reason });
-};
-
-export const recordTokenOperation = (
-  operation: 'sign' | 'verify' | 'refresh',
-  tokenType: 'access' | 'refresh',
+export const recordItemOperation = (
+  action: 'create' | 'update' | 'delete' | 'get' | 'list' | 'presign_upload' | 'presign_preview',
   status: 'success' | 'failure'
 ) => {
-  tokenOperationsCounter.add(1, { operation, token_type: tokenType, status });
-};
-
-export const recordRateLimitExceeded = (route: string, keyPrefix: string = 'rl') => {
-  rateLimitCounter.add(1, { route, key_prefix: keyPrefix });
+  itemOperationsCounter.add(1, { action, status });
 };
 
 export const recordValidationError = (errorType: string, route: string = 'unknown') => {
@@ -181,7 +151,7 @@ export const recordValidationError = (errorType: string, route: string = 'unknow
 };
 
 export const recordDependencyDuration = (
-  dependency: 'mongodb' | 'valkey' | 's3' | 'rabbitmq',
+  dependency: 'mongodb' | 's3' | 'valkey',
   operation: string,
   durationMs: number,
   status: 'success' | 'error' = 'success'
@@ -190,7 +160,7 @@ export const recordDependencyDuration = (
 };
 
 export const recordDependencyError = (
-  dependency: 'mongodb' | 'valkey' | 's3' | 'rabbitmq',
+  dependency: 'mongodb' | 's3' | 'valkey',
   operation: string
 ) => {
   dependencyErrorsCounter.add(1, { dependency, operation });
@@ -201,7 +171,7 @@ export const recordDependencyError = (
 // ---------------------------------------------------------------------------
 
 /**
- * Normalizes request paths to parameterized routes (e.g. /api/v1/auth/user/:id)
+ * Normalizes request paths to parameterized routes (e.g. /api/v1/items/:id)
  * to strictly prevent Prometheus high-cardinality label explosions.
  */
 export function getRoutePattern(req: Request): string {
@@ -225,7 +195,7 @@ export function getRoutePattern(req: Request): string {
  * 1. Automatically tracks active / in-flight requests for saturation monitoring.
  * 2. Accurately measures end-to-end request duration via high-resolution process.hrtime.
  * 3. Records latency and request counts with normalized routes and true HTTP status codes.
- * 4. Captures 401s, 403s, 404s, 429s, health checks, and errors without manual controller instrumentation.
+ * 4. Captures 400s, 404s, 500s, and health checks without manual controller instrumentation.
  * 5. Prevents double-counting if a controller already marked the metric.
  */
 export const httpMetricsMiddleware = (req: Request, res: Response, next: NextFunction) => {
@@ -288,15 +258,11 @@ export default {
   requestCounter,
   latencyHistogram,
   activeRequestsCounter,
-  authAttemptsCounter,
-  tokenOperationsCounter,
-  rateLimitCounter,
+  itemOperationsCounter,
   validationErrorCounter,
   dependencyDurationHistogram,
   dependencyErrorsCounter,
-  recordAuthAttempt,
-  recordTokenOperation,
-  recordRateLimitExceeded,
+  recordItemOperation,
   recordValidationError,
   recordDependencyDuration,
   recordDependencyError,

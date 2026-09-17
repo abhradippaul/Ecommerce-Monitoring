@@ -1,5 +1,5 @@
 import type { Response, NextFunction } from 'express';
-import logger from '../logger/index.js';
+import logger from '../utils/logger.js';
 import { verifyAccessToken } from '../utils/token.js';
 import type { AuthenticatedRequest, UserRole } from '../utils/types.js';
 

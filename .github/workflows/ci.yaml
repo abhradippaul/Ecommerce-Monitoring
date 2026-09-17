@@ -22,6 +22,21 @@ env:
   COMMIT_SHA: ${{ github.sha }}
 
 jobs:
+
+  slack-notification-main:
+    name: Slack Notification Main
+    runs-on: ubuntu-latest
+    # if: github.ref == 'refs/heads/main'
+    if: always()
+    steps:
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@v2
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: "C0C22HEFTF1"
+            text: "Build for ${{ github.repository }} on ${{ github.ref_name }}: ${{ job.status }}"
   # ---------------------------------------------------------------------
   # 0. Work out what changed so unrelated services/stacks are skipped
   # ---------------------------------------------------------------------

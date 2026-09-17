@@ -42,7 +42,7 @@ const sdk = new NodeSDK({
       },
     },
     {
-      instrumentName: 'item.dependency.duration',
+      instrumentName: 'order.dependency.duration',
       aggregation: {
         type: AggregationType.EXPLICIT_BUCKET_HISTOGRAM,
         options: {
