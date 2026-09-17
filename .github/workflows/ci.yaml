@@ -70,6 +70,8 @@ jobs:
           services=()
           [ "${{ steps.filter.outputs.auth }}" = "true" ]  && services+=('"Auth-Service"')
           [ "${{ steps.filter.outputs.frontend }}" = "true" ] && services+=('"frontend"')
+          [ "${{ steps.filter.outputs.item }}" = "true" ] && services+=('"Item-Service"')
+          [ "${{ steps.filter.outputs.order }}" = "true" ] && services+=('"Order-Service"')
           json=$(IFS=,; echo "[${services[*]}]")
           echo "matrix=$json" >> "$GITHUB_OUTPUT"
           echo "Node services to build: $json"
