@@ -7,7 +7,28 @@ import orderRoutes from './routes/order.routes.js';
 import logger from './logger/index.js';
 import { config } from './utils/config.js';
 
+import cartRoutes from './routes/cart.routes.js';
+
 const app: Express = express();
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, x-requested-with, x-user-id'
+  );
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -16,11 +37,14 @@ app.use(loggerMiddleware);
 app.use('/health', healthRoutes);
 app.use('/info', infoRoutes);
 app.use('/orders', orderRoutes);
+app.use('/api/v1/orders', orderRoutes);
+app.use('/cart', cartRoutes);
+app.use('/api/v1/cart', cartRoutes);
 
 app.get('/slow', async (req: Request, res: Response) => {
   const duration = parseInt(req.query.duration as string) || 3000;
   logger.info(`Simulating slow request, ${duration}`);
-  await new Promise((resolve) => setTimeout(resolve, duration));
+  await new Promise(resolve => setTimeout(resolve, duration));
   res.json({ status: 'slow', duration });
 });
 

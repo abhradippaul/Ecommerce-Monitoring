@@ -3,7 +3,7 @@ export class HealthService {
     return {
       status: 'UP',
       timestamp: new Date().toISOString(),
-      uptime: process.uptime()
+      uptime: process.uptime(),
     };
   }
 }

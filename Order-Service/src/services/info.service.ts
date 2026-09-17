@@ -6,7 +6,7 @@ export class InfoService {
       name: config.appName,
       version: '1.0.0',
       description: 'REST API for monitoring NodeJS application',
-      environment: process.env.NODE_ENV || 'development'
+      environment: process.env.NODE_ENV || 'development',
     };
   }
 }

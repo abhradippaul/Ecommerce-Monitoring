@@ -7,11 +7,11 @@ import { config } from '../utils/config.js';
 let logger: Logger;
 
 if (config.nodeEnv === 'production') {
-    logger = productionLogger();
+  logger = productionLogger();
 } else if (config.nodeEnv === 'uat') {
-    logger = uatLogger();
+  logger = uatLogger();
 } else {
-    logger = devLogger();
+  logger = devLogger();
 }
 
 export default logger;

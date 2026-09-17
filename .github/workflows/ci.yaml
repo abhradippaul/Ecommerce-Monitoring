@@ -70,6 +70,8 @@ jobs:
           services=()
           [ "${{ steps.filter.outputs.auth }}" = "true" ]  && services+=('"Auth-Service"')
           [ "${{ steps.filter.outputs.frontend }}" = "true" ] && services+=('"frontend"')
+          [ "${{ steps.filter.outputs.item }}" = "true" ] && services+=('"Item-Service"')
+          [ "${{ steps.filter.outputs.order }}" = "true" ] && services+=('"Order-Service"')
           json=$(IFS=,; echo "[${services[*]}]")
           echo "matrix=$json" >> "$GITHUB_OUTPUT"
           echo "Node services to build: $json"
@@ -105,7 +107,9 @@ jobs:
   node-build-and-push:
     name: Build & Push ${{ matrix.service }}
     needs: [detect-changes, node-ci]
-    if: needs.detect-changes.outputs.node-matrix != '[]'
+    if: |
+      github.event_name != 'pull_request' &&
+      needs.detect-changes.outputs.node-matrix != '[]'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -115,7 +119,6 @@ jobs:
         uses: actions/checkout@v7.0.0
 
       - name: Login to Docker Hub
-        if: github.event_name != 'pull_request'
         uses: docker/login-action@v4.2.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -137,7 +140,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: ./${{ matrix.service }}
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.img.outputs.name }}:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.img.outputs.name }}:${{ env.COMMIT_SHA }}

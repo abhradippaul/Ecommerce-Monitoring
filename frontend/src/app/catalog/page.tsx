@@ -20,6 +20,15 @@ import {
   SlidersHorizontal,
   Loader2
 } from "lucide-react";
+import {
+  fetchCartCount,
+  fetchCartDetails,
+  fetchUserCart,
+  addItemToCart,
+  updateItemQuantityInCart,
+  removeItemFromCart,
+  clearUserCart,
+} from "@/lib/cartService";
 
 interface Product {
   id: string;
@@ -76,6 +85,9 @@ const getProductVisuals = (category: string, name: string, index: number) => {
 
 export default function CatalogPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [serverCartCount, setServerCartCount] = useState<number>(0);
+  const [isCartLoaded, setIsCartLoaded] = useState<boolean>(false);
+  const [isCartLoading, setIsCartLoading] = useState<boolean>(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [bounceBadge, setBounceBadge] = useState(false);
@@ -153,6 +165,53 @@ export default function CatalogPage() {
     });
 
   useEffect(() => {
+    let isMounted = true;
+    fetchCartCount().then((count) => {
+      if (!isMounted) return;
+      setServerCartCount(count);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isCartOpen) return;
+    let isMounted = true;
+    setIsCartLoading(true);
+    fetchCartDetails()
+      .then((remoteCart) => {
+        if (!isMounted) return;
+        setIsCartLoading(false);
+        setIsCartLoaded(true);
+        if (!remoteCart || !remoteCart.items || remoteCart.items.length === 0) return;
+        const initialCart: CartItem[] = remoteCart.items.map((item, idx) => {
+          const visuals = getProductVisuals(item.category || "Lifestyle", item.name, idx);
+          return {
+            product: {
+              id: item.productId,
+              name: item.name,
+              category: item.category || "Lifestyle",
+              price: item.price,
+              quantity: 999,
+              sales: 0,
+              gradient: visuals.gradient,
+              icon: visuals.icon,
+            },
+            quantity: item.quantity,
+          };
+        });
+        setCart(initialCart);
+      })
+      .catch(() => {
+        if (isMounted) setIsCartLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [isCartOpen]);
+
+  useEffect(() => {
     if (cart.length === 0) return;
     setBounceBadge(true);
     const t = setTimeout(() => setBounceBadge(false), 300);
@@ -174,10 +233,28 @@ export default function CatalogPage() {
       }
       return [...prev, { product, quantity: 1 }];
     });
+    setServerCartCount((prev) => prev + 1);
+
+    addItemToCart({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      quantity: 1,
+      category: product.category,
+    });
   };
 
   const updateCartQty = (productId: string, delta: number) => {
     setCart((prev) => {
+      const target = prev.find((item) => item.product.id === productId);
+      if (target) {
+        const nextQty = target.quantity + delta;
+        if (nextQty <= 0) {
+          removeItemFromCart(productId);
+        } else {
+          updateItemQuantityInCart(productId, nextQty);
+        }
+      }
       return prev
         .map((item) => {
           if (item.product.id === productId) {
@@ -209,13 +286,16 @@ export default function CatalogPage() {
       });
     });
 
+    clearUserCart();
     setCart([]);
+    setServerCartCount(0);
     setIsCartOpen(false);
     setCheckoutSuccess(true);
     setTimeout(() => setCheckoutSuccess(false), 4500);
   };
 
-  const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const localCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const cartCount = isCartLoaded || cart.length > 0 ? localCartCount : serverCartCount;
   const cartTotal = cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
   const isLoading = isLoadingProducts || isLoadingCategories;
 
@@ -507,7 +587,12 @@ export default function CatalogPage() {
             </div>
 
             <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
-              {cart.length === 0 ? (
+              {isCartLoading && !isCartLoaded ? (
+                <div className="py-24 text-center text-slate-400 flex flex-col items-center justify-center gap-2 text-sm">
+                  <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
+                  <span>Loading cart items...</span>
+                </div>
+              ) : cart.length === 0 ? (
                 <div className="py-24 text-center text-slate-400 italic text-sm">
                   No items added to cart yet.
                 </div>
