@@ -1,9 +1,6 @@
 import jwt from 'jsonwebtoken';
 import type { JwtPayload } from 'jsonwebtoken';
-import type {
-  AuthUser,
-  UserRole,
-} from './types.js';
+import type { AuthUser, UserRole } from './types.js';
 import { config } from './config.js';
 import fs from 'fs';
 
@@ -21,7 +18,7 @@ const publicKey = fs.readFileSync(config.jwtPublicKeyLocation, 'utf8');
 
 const verifyAccessToken = (token: string): AuthUser => {
   const decoded = jwt.verify(token, publicKey, {
-    algorithms: ['RS256'],
+    algorithms: ['ES256', 'RS256'],
     issuer: 'auth-service',
   });
 

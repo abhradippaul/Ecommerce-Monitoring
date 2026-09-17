@@ -16,7 +16,7 @@ export class OrderService {
 
     const newOrder = new Order({
       ...data,
-      totalPrice
+      totalPrice,
     });
 
     return await newOrder.save();

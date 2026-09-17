@@ -4,15 +4,15 @@ import { config } from '../utils/config.js';
 const { combine, timestamp, json, errors } = format;
 
 const devLogger = () => {
-    return createLogger({
-        level: config.logLevel,
-        format: combine(timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), errors({ stack: true }), json()),
-        transports: [
-            new transports.File({ filename: config.logFile }),
-            new transports.File({ filename: config.errorFile, level: 'error' }),
-            new transports.Console() // ONLY PRINTING LOGS IN TERMINAL
-        ]
-    });
+  return createLogger({
+    level: config.logLevel,
+    format: combine(timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), errors({ stack: true }), json()),
+    transports: [
+      new transports.File({ filename: config.logFile }),
+      new transports.File({ filename: config.errorFile, level: 'error' }),
+      new transports.Console(), // ONLY PRINTING LOGS IN TERMINAL
+    ],
+  });
 };
 
 // const elasticTransport = (spanTracerId, indexPrefix) => {

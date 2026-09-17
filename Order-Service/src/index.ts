@@ -9,7 +9,9 @@ const startServer = async () => {
   await connectDB();
 
   app.listen(PORT, () => {
-    logger.info(`Order Service is running in ${config.nodeEnv} environment on http://localhost:${PORT}`);
+    logger.info(
+      `Order Service is running in ${config.nodeEnv} environment on http://localhost:${PORT}`
+    );
   });
 };
 

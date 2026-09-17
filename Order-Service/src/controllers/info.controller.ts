@@ -6,7 +6,7 @@ export const getInfo = (req: Request, res: Response) => {
   logger.info('Info requested');
   const info = infoService.getInfo();
   res.status(200).json({
-    message: "Successfully fetched application info",
-    data: info
+    message: 'Successfully fetched application info',
+    data: info,
   });
 };

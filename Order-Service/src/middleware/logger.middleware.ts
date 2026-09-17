@@ -10,7 +10,7 @@ export const loggerMiddleware = (req: Request, res: Response, next: NextFunction
       method: req.method,
       url: req.originalUrl,
       statusCode: res.statusCode,
-      duration: `${duration}ms`
+      duration: `${duration}ms`,
     };
 
     if (res.statusCode >= 500) {
