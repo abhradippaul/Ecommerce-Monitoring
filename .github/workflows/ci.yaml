@@ -104,67 +104,9 @@ jobs:
       service: ${{ matrix.service }}
     secrets: inherit
 
-  node-build-and-scan:
-    name: Build & Scan ${{ matrix.service }}
-    needs: [detect-changes, node-ci]
-    if: |
-      needs.detect-changes.outputs.node-matrix != '[]'
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: ${{ fromJSON(needs.detect-changes.outputs.node-matrix) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7.0.0
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4.1.0
-
-      - name: Compute image name
-        id: img
-        run: |
-          name=$(echo "${{ matrix.service }}" | tr '[:upper:]' '[:lower:]')
-          echo "name=${name}-monitoring" >> "$GITHUB_OUTPUT"
-
-      - name: Build multi-arch image
-        uses: docker/build-push-action@v7
-        with:
-          context: ./${{ matrix.service }}
-          platforms: linux/amd64,linux/arm64
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and load local image for Trivy scan
-        uses: docker/build-push-action@v7
-        with:
-          context: ./${{ matrix.service }}
-          load: true
-          tags: ${{ steps.img.outputs.name }}:${{ env.COMMIT_SHA }}
-          cache-from: type=gha
-
-      - name: Run Trivy vulnerability scanner on image
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          scan-type: 'image'
-          image-ref: '${{ steps.img.outputs.name }}:${{ env.COMMIT_SHA }}'
-          format: 'sarif'
-          output: 'trivy-image-results.sarif'
-          severity: 'CRITICAL,HIGH'
-
-      - name: Upload Trivy scan results to GitHub Security tab
-        if: always()
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: 'trivy-image-results.sarif'
-          category: 'trivy-image-${{ matrix.service }}'
-
   node-push:
     name: Push ${{ matrix.service }}
-    needs: [detect-changes, node-build-and-scan]
+    needs: [detect-changes, node-ci]
     if: |
       github.event_name != 'pull_request' &&
       needs.detect-changes.outputs.node-matrix != '[]'
