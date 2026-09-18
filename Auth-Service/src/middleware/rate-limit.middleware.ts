@@ -3,6 +3,7 @@ import valkey from '../utils/valkey.js';
 import logger from '../utils/logger.js';
 import type { RateLimitOptions } from '../utils/types.js';
 import { config } from '../utils/config.js';
+import { recordRateLimitExceeded } from '../utils/metrics.js';
 
 export const rateLimit = (options: RateLimitOptions) => {
   const { windowMs, max, keyPrefix = 'rl' } = options;
@@ -31,6 +32,8 @@ export const rateLimit = (options: RateLimitOptions) => {
       res.setHeader('X-RateLimit-Reset', Math.ceil(resetAt / 1000));
 
       if (current > max) {
+        const route = req.baseUrl ? `${req.baseUrl}${req.route?.path || req.path || ''}` : req.path || req.originalUrl || 'unknown';
+        recordRateLimitExceeded(route, keyPrefix);
         res.setHeader('Retry-After', ttl);
         return res.status(429).json({
           message: 'Too many requests, please try again later.',

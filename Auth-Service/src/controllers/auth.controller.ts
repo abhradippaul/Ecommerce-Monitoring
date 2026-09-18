@@ -7,9 +7,17 @@ import {
   uploadAvatarUrlSchema,
 } from '../schemas/user.schema.js';
 import logger from '../utils/logger.js';
+import { sendQueueMsg } from '../utils/rabbitmq.js';
+import { userCreatedEventSchema } from '../schemas/events.schema.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/token.js';
 import type { AuthenticatedRequest } from '../utils/types.js';
-import { latencyHistogram, requestCounter, validationErrorCounter } from '../utils/metrics.js';
+import {
+  latencyHistogram,
+  requestCounter,
+  validationErrorCounter,
+  recordAuthAttempt,
+  recordTokenOperation,
+} from '../utils/metrics.js';
 import { withSpan, withHttpSpan } from '../utils/traces.js';
 import { ATTR_ERROR_TYPE } from '@opentelemetry/semantic-conventions';
 import { HttpError } from '../utils/error.js';
@@ -58,6 +66,20 @@ export const register = async (req: Request, res: Response) => {
         throw new HttpError(400, 'Registration failed', 'failed_to_register');
       }
 
+      await withSpan('register.triggerCartCreation', async () => {
+        try {
+          const validatedEvent = userCreatedEventSchema.parse({
+            userId: user._id.toString(),
+          });
+          await sendQueueMsg('user-created', JSON.stringify(validatedEvent));
+        } catch (queueError: unknown) {
+          logger.error('Failed to trigger cart creation on user registration:', {
+            error: queueError instanceof Error ? queueError.message : queueError,
+            user_id: user._id,
+          });
+        }
+      });
+
       logger.info('User registered', {
         user_id: user._id,
         trace_id: traceId,
@@ -65,6 +87,8 @@ export const register = async (req: Request, res: Response) => {
         http_status_code: 201,
         duration_ms: Date.now() - start,
       });
+      res.locals._metricsRecorded = true;
+      recordAuthAttempt('register', 'success');
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -101,6 +125,8 @@ export const register = async (req: Request, res: Response) => {
       } else {
         logger.warn('User registration failed', logPayload);
       }
+      res.locals._metricsRecorded = true;
+      recordAuthAttempt('register', 'failure', err.errorType ?? 'unexpected');
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -181,6 +207,10 @@ export const login = async (req: Request, res: Response) => {
         http_status_code: 200,
         duration_ms: Date.now() - start,
       });
+      res.locals._metricsRecorded = true;
+      recordAuthAttempt('login', 'success');
+      recordTokenOperation('sign', 'access', 'success');
+      recordTokenOperation('sign', 'refresh', 'success');
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -209,6 +239,8 @@ export const login = async (req: Request, res: Response) => {
       } else {
         logger.warn('Login failed', logPayload);
       }
+      res.locals._metricsRecorded = true;
+      recordAuthAttempt('login', 'failure', err.errorType ?? 'unexpected');
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -236,6 +268,7 @@ export const logout = async (req: Request, res: Response) => {
         http_status_code: 200,
         duration_ms: Date.now() - start,
       });
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -261,6 +294,7 @@ export const logout = async (req: Request, res: Response) => {
       } else {
         logger.warn('Logout failed', logPayload);
       }
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -324,6 +358,7 @@ export const updateUser = async (req: Request, res: Response) => {
         http_status_code: 200,
         duration_ms: Date.now() - start,
       });
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -350,6 +385,7 @@ export const updateUser = async (req: Request, res: Response) => {
       } else {
         logger.warn(`Update error: ${err.message}`, logPayload);
       }
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -406,6 +442,7 @@ export const deleteUser = async (req: Request, res: Response) => {
         http_status_code: 200,
         duration_ms: Date.now() - start,
       });
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -431,6 +468,7 @@ export const deleteUser = async (req: Request, res: Response) => {
       } else {
         logger.warn(`Delete error: ${err.message}`, logPayload);
       }
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -447,7 +485,7 @@ export const deleteUser = async (req: Request, res: Response) => {
 
 export const refresh = async (req: Request, res: Response) => {
   const start = Date.now();
-  const route = '/auth/refresh';
+  const route = req.route ? `${req.baseUrl}${req.route.path}` : req.originalUrl;
   const httpMethod = req.method;
   requestCounter.add(1, { route, http_method: httpMethod });
 
@@ -482,6 +520,9 @@ export const refresh = async (req: Request, res: Response) => {
         http_status_code: 200,
         duration_ms: Date.now() - start,
       });
+      res.locals._metricsRecorded = true;
+      recordAuthAttempt('refresh', 'success');
+      recordTokenOperation('refresh', 'access', 'success');
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -510,6 +551,9 @@ export const refresh = async (req: Request, res: Response) => {
       } else {
         logger.warn(`Refresh error: ${err.message}`, logPayload);
       }
+      res.locals._metricsRecorded = true;
+      recordAuthAttempt('refresh', 'failure', err.errorType ?? 'unexpected');
+      recordTokenOperation('refresh', 'access', 'failure');
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -562,6 +606,7 @@ export const uploadAvatarUrl = async (req: Request, res: Response) => {
         http_status_code: 200,
         duration_ms: Date.now() - start,
       });
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -591,6 +636,7 @@ export const uploadAvatarUrl = async (req: Request, res: Response) => {
       } else {
         logger.warn(`Upload avatar URL error: ${err.message}`, logPayload);
       }
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,

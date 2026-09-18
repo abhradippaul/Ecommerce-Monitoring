@@ -22,8 +22,12 @@ export class OrderService {
     return await newOrder.save();
   }
 
-  async getAllOrders(): Promise<IOrder[]> {
-    return await Order.find().populate('items.item');
+  async getAllOrders(skip: number = 0, limit: number = 20): Promise<IOrder[]> {
+    return await Order.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('items.item');
   }
 
   async getOrderById(id: string): Promise<IOrder | null> {

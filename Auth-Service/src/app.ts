@@ -4,7 +4,7 @@ import authRoutes from './routes/auth.routes.js';
 import profileRoutes from './routes/profile.routes.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger.js';
-import { requestCounter } from './utils/metrics.js';
+import { httpMetricsMiddleware } from './utils/metrics.js';
 import { sendQueueMsg } from './utils/rabbitmq.js';
 
 const app: Express = express();
@@ -27,12 +27,13 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(httpMetricsMiddleware);
+
 app.use('/api/v1/auth/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api/v1/auth/profile', profileRoutes);
 app.use('/api/v1/auth', authRoutes);
 
 app.get('/', (req: Request, res: Response) => {
-  requestCounter.add(1, { route: '/' });
   return res.status(200).json({
     message: 'Auth Service is running',
     data: {
@@ -44,7 +45,6 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 app.get('/api/v1/auth/info', (req: Request, res: Response) => {
-  requestCounter.add(1, { route: '/api/v1/auth/info', http_method: 'GET' });
   return res.status(200).json({
     message: 'Auth Service is running',
     data: {
@@ -56,7 +56,6 @@ app.get('/api/v1/auth/info', (req: Request, res: Response) => {
 });
 
 app.get('/api/v1/auth/health', async (req: Request, res: Response) => {
-  requestCounter.add(1, { route: '/api/v1/auth/health', http_method: 'GET' });
   // await sendQueueMsg('hello', 'hello world');
   return res.status(200).json({
     message: 'Successfully fetched health status',
@@ -70,7 +69,6 @@ app.get('/api/v1/auth/health', async (req: Request, res: Response) => {
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  requestCounter.add(1, { route: '/error' });
   res.status(500).json({ error: 'Internal Server Error' });
 });
 

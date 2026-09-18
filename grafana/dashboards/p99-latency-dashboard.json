@@ -18,79 +18,8 @@
         "y": 0
       },
       "id": 100,
-      "title": "Latency Overview & Key Percentiles",
+      "title": "Executive KPI Summary & Golden Signals",
       "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 500
-              },
-              {
-                "color": "red",
-                "value": 1000
-              }
-            ]
-          },
-          "unit": "ms"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 0,
-        "y": 1
-      },
-      "id": 1,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_client_request_duration_milliseconds_bucket{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\", status=~\"$status\"}[$__rate_interval])))",
-          "instant": false,
-          "legendFormat": "p99",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Current p99 Latency",
-      "type": "stat"
     },
     {
       "datasource": {
@@ -127,6 +56,77 @@
       "gridPos": {
         "h": 4,
         "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_client_request_duration_milliseconds_bucket{job=~\"$service\"}[$__rate_interval]))) or vector(0)",
+          "instant": false,
+          "legendFormat": "p99 Latency",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Current p99 Latency",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 100
+              },
+              {
+                "color": "red",
+                "value": 300
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
         "x": 4,
         "y": 1
       },
@@ -153,14 +153,14 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.90, sum by (le) (rate(http_client_request_duration_milliseconds_bucket{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\", status=~\"$status\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_client_request_duration_milliseconds_bucket{job=~\"$service\"}[$__rate_interval]))) or vector(0)",
           "instant": false,
-          "legendFormat": "p90",
+          "legendFormat": "p50 (Median)",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Current p90 Latency",
+      "title": "Current p50 (Median)",
       "type": "stat"
     },
     {
@@ -171,7 +171,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
           },
           "mappings": [],
           "thresholds": {
@@ -180,18 +180,10 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 200
-              },
-              {
-                "color": "red",
-                "value": 500
               }
             ]
           },
-          "unit": "ms"
+          "unit": "reqps"
         },
         "overrides": []
       },
@@ -224,143 +216,9 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_client_request_duration_milliseconds_bucket{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\", status=~\"$status\"}[$__rate_interval])))",
+          "expr": "sum(rate(http_requests_total{job=~\"$service\"}[$__rate_interval])) or vector(0)",
           "instant": false,
-          "legendFormat": "p50 (Median)",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Current p50 (Median)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 250
-              },
-              {
-                "color": "red",
-                "value": 600
-              }
-            ]
-          },
-          "unit": "ms"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 12,
-        "y": 1
-      },
-      "id": 4,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(http_client_request_duration_milliseconds_sum{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\", status=~\"$status\"}[$__rate_interval])) / sum(rate(http_client_request_duration_milliseconds_count{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\", status=~\"$status\"}[$__rate_interval]))",
-          "instant": false,
-          "legendFormat": "Average",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Average Latency",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "reqps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 16,
-        "y": 1
-      },
-      "id": 5,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(http_requests_total{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\"}[$__rate_interval]))",
-          "instant": false,
-          "legendFormat": "Total RPS",
+          "legendFormat": "Throughput",
           "range": true,
           "refId": "A"
         }
@@ -403,6 +261,148 @@
       "gridPos": {
         "h": 4,
         "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "((sum(rate(http_client_request_duration_milliseconds_count{job=~\"$service\", status=\"error\"}[$__rate_interval])) or vector(0)) / (sum(rate(http_client_request_duration_milliseconds_count{job=~\"$service\"}[$__rate_interval])) > 0)) * 100 or vector(0)",
+          "instant": false,
+          "legendFormat": "Error Rate",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Error Rate (%)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 200
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(http_requests_active{job=~\"$service\"}) or vector(0)",
+          "instant": false,
+          "legendFormat": "Active In-Flight",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Active Requests (Saturation)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.5
+              },
+              {
+                "color": "red",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
         "x": 20,
         "y": 1
       },
@@ -429,15 +429,27 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum(rate(http_client_request_duration_milliseconds_count{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\", status=\"error\"}[$__rate_interval])) or vector(0)) / (sum(rate(http_client_request_duration_milliseconds_count{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\"}[$__rate_interval])) > 0) * 100",
+          "expr": "sum(rate(auth_rate_limit_exceeded_total{job=~\"$service\"}[$__rate_interval])) or vector(0)",
           "instant": false,
-          "legendFormat": "Error Rate",
+          "legendFormat": "429 Throttles/sec",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Error Rate (%)",
+      "title": "Rate Limit Throttles (429)",
       "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 101,
+      "title": "Latency Analysis & SLA Tracking (p99 / p90 / p50)",
+      "type": "row"
     },
     {
       "datasource": {
@@ -512,21 +524,6 @@
                 }
               }
             ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Average"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "blue",
-                  "mode": "fixed"
-                }
-              }
-            ]
           }
         ]
       },
@@ -534,7 +531,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 5
+        "y": 6
       },
       "id": 7,
       "options": {
@@ -561,8 +558,8 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_client_request_duration_milliseconds_bucket{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\", status=~\"$status\"}[$__rate_interval])))",
-          "legendFormat": "p99",
+          "expr": "histogram_quantile(0.99, sum by (le, job) (rate(http_client_request_duration_milliseconds_bucket{job=~\"$service\"}[$__rate_interval])))",
+          "legendFormat": "{{job}} p99",
           "range": true,
           "refId": "A"
         },
@@ -572,8 +569,8 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.90, sum by (le) (rate(http_client_request_duration_milliseconds_bucket{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\", status=~\"$status\"}[$__rate_interval])))",
-          "legendFormat": "p90",
+          "expr": "histogram_quantile(0.90, sum by (le, job) (rate(http_client_request_duration_milliseconds_bucket{job=~\"$service\"}[$__rate_interval])))",
+          "legendFormat": "{{job}} p90",
           "range": true,
           "refId": "B"
         },
@@ -583,24 +580,13 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_client_request_duration_milliseconds_bucket{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\", status=~\"$status\"}[$__rate_interval])))",
-          "legendFormat": "p50 (Median)",
+          "expr": "histogram_quantile(0.50, sum by (le, job) (rate(http_client_request_duration_milliseconds_bucket{job=~\"$service\"}[$__rate_interval])))",
+          "legendFormat": "{{job}} p50",
           "range": true,
           "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(http_client_request_duration_milliseconds_sum{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\", status=~\"$status\"}[$__rate_interval])) / sum(rate(http_client_request_duration_milliseconds_count{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\", status=~\"$status\"}[$__rate_interval]))",
-          "legendFormat": "Average",
-          "range": true,
-          "refId": "D"
         }
       ],
-      "title": "Latency Percentiles (p99 / p90 / p50 / Avg)",
+      "title": "Latency Percentiles (p99 / p90 / p50)",
       "type": "timeseries"
     },
     {
@@ -635,7 +621,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 5
+        "y": 6
       },
       "id": 8,
       "options": {
@@ -662,26 +648,14 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (le, route) (rate(http_client_request_duration_milliseconds_bucket{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\", status=~\"$status\"}[$__rate_interval])))",
-          "legendFormat": "p99 - {{route}}",
+          "expr": "histogram_quantile(0.99, sum by (le, route, job) (rate(http_client_request_duration_milliseconds_bucket{job=~\"$service\"}[$__rate_interval])))",
+          "legendFormat": "{{job}} {{route}}",
           "range": true,
           "refId": "A"
         }
       ],
       "title": "p99 Latency by Route",
       "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 13
-      },
-      "id": 101,
-      "title": "Distribution & Traffic Analysis",
-      "type": "row"
     },
     {
       "datasource": {
@@ -705,7 +679,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 24,
         "x": 0,
         "y": 14
       },
@@ -749,15 +723,27 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (le) (rate(http_client_request_duration_milliseconds_bucket{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\", status=~\"$status\"}[$__rate_interval]))",
+          "expr": "sum by (le) (rate(http_client_request_duration_milliseconds_bucket{job=~\"$service\"}[$__rate_interval]))",
           "format": "heatmap",
           "legendFormat": "{{le}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Latency Distribution Heatmap (OTel Buckets 100ms - 1300ms)",
+      "title": "Latency Distribution Heatmap (OTel Buckets)",
       "type": "heatmap"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 102,
+      "title": "Traffic, Status Codes & Reliability",
+      "type": "row"
     },
     {
       "datasource": {
@@ -795,8 +781,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 14
+        "x": 0,
+        "y": 23
       },
       "id": 10,
       "options": {
@@ -823,26 +809,14 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (route) (rate(http_requests_total{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\"}[$__rate_interval]))",
-          "legendFormat": "{{route}}",
+          "expr": "sum by (route, job) (rate(http_requests_total{job=~\"$service\"}[$__rate_interval]))",
+          "legendFormat": "{{job}} {{route}}",
           "range": true,
           "refId": "A"
         }
       ],
       "title": "Request Rate by Route (Stacked RPS)",
       "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 22
-      },
-      "id": 102,
-      "title": "Service Health, Status & Errors",
-      "type": "row"
     },
     {
       "datasource": {
@@ -908,9 +882,9 @@
         ]
       },
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 12,
-        "x": 0,
+        "x": 12,
         "y": 23
       },
       "id": 11,
@@ -938,14 +912,120 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (status) (rate(http_client_request_duration_milliseconds_count{job=~\"$service\", route=~\"$route\", http_method=~\"$http_method\"}[$__rate_interval]))",
-          "legendFormat": "Status: {{status}}",
+          "expr": "sum by (status, job) (rate(http_client_request_duration_milliseconds_count{job=~\"$service\"}[$__rate_interval]))",
+          "legendFormat": "{{job}} - {{status}}",
           "range": true,
           "refId": "A"
         }
       ],
       "title": "Throughput by Status (Success vs Error)",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "id": 103,
+      "title": "Domain Operations, Business Workflows & Validation Errors",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 50,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (action, status, job) (rate(auth_attempts_total{job=~\"$service\"}[$__rate_interval]))",
+          "legendFormat": "{{job}} - {{action}} ({{status}})",
+          "range": true,
+          "refId": "AuthOps"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (action, status, job) (rate(item_operations_total{job=~\"$service\"}[$__rate_interval]))",
+          "legendFormat": "{{job}} - {{action}} ({{status}})",
+          "range": true,
+          "refId": "ItemOps"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (action, status, job) (rate(order_operations_total{job=~\"$service\"}[$__rate_interval]))",
+          "legendFormat": "{{job}} - {{action}} ({{status}})",
+          "range": true,
+          "refId": "OrderOps"
+        }
+      ],
+      "title": "Domain Operations & Business Workflows",
+      "type": "timeseries",
+      "description": "Monitors high-value domain operations across Auth, Item, and Order services"
     },
     {
       "datasource": {
@@ -982,9 +1062,9 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 23
+        "y": 32
       },
-      "id": 12,
+      "id": 13,
       "options": {
         "legend": {
           "calcs": [
@@ -1009,13 +1089,244 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (error_type) (rate(validation_errors_total{job=~\"$service\"}[$__rate_interval]))",
-          "legendFormat": "Error: {{error_type}}",
+          "expr": "sum by (error_type, job) (rate(validation_errors_total{job=~\"$service\"}[$__rate_interval]))",
+          "legendFormat": "{{job}} - {{error_type}}",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (route, job) (rate(auth_rate_limit_exceeded_total{job=~\"$service\"}[$__rate_interval]))",
+          "legendFormat": "{{job}} 429 - {{route}}",
+          "range": true,
+          "refId": "B"
         }
       ],
-      "title": "Validation Errors by Type (schema, user_exists, auth)",
+      "title": "Validation & Rate-Limiting Errors",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 39
+      },
+      "id": 104,
+      "title": "System Saturation & Runtime Health (Node.js & Process)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 20
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Event Loop Delay (p99)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Event Loop Delay (Mean)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(nodejs_eventloop_delay_milliseconds{job=~\"$service\"} or (nodejs_eventloop_delay_seconds{job=~\"$service\"} * 1000))",
+          "legendFormat": "{{job}} Mean",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(nodejs_eventloop_delay_p99_milliseconds{job=~\"$service\"} or (nodejs_eventloop_delay_p99_seconds{job=~\"$service\"} * 1000))",
+          "legendFormat": "{{job}} p99",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Node.js Event Loop Lag (Mean & p99)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "id": 15,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "process_memory_heap_used_bytes{job=~\"$service\"}",
+          "legendFormat": "{{job}} Heap Used",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "process_memory_heap_total_bytes{job=~\"$service\"}",
+          "legendFormat": "{{job}} Heap Total",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "process_memory_rss_bytes{job=~\"$service\"}",
+          "legendFormat": "{{job}} RSS",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Node.js Process Memory Saturation",
       "type": "timeseries"
     }
   ],
@@ -1023,122 +1334,55 @@
   "schemaVersion": 38,
   "style": "dark",
   "tags": [
-    "auth-service",
     "ecommerce",
+    "auth-service",
+    "item-service",
+    "order-service",
     "latency",
     "p99",
     "opentelemetry",
-    "monitoring"
+    "monitoring",
+    "sre"
   ],
   "templating": {
     "list": [
       {
+        "allValue": ".*",
         "current": {
           "selected": true,
-          "text": "auth-service",
-          "value": "auth-service"
+          "text": "All",
+          "value": "$__all"
         },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
-        },
-        "definition": "label_values(http_client_request_duration_milliseconds_bucket, job)",
         "hide": 0,
         "includeAll": true,
         "label": "Service",
-        "multi": false,
+        "multi": true,
         "name": "service",
-        "options": [],
-        "query": {
-          "query": "label_values(http_client_request_duration_milliseconds_bucket, job)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": false,
+            "text": "auth-service",
+            "value": "auth-service"
+          },
+          {
+            "selected": false,
+            "text": "item-service",
+            "value": "item-service"
+          },
+          {
+            "selected": false,
+            "text": "order-service",
+            "value": "order-service"
+          }
+        ],
+        "query": "auth-service, item-service, order-service",
         "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {
-          "selected": true,
-          "text": "All",
-          "value": "$__all"
-        },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
-        },
-        "definition": "label_values(http_client_request_duration_milliseconds_bucket{job=~\"$service\"}, route)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Route",
-        "multi": true,
-        "name": "route",
-        "options": [],
-        "query": {
-          "query": "label_values(http_client_request_duration_milliseconds_bucket{job=~\"$service\"}, route)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {
-          "selected": true,
-          "text": "All",
-          "value": "$__all"
-        },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
-        },
-        "definition": "label_values(http_client_request_duration_milliseconds_bucket{job=~\"$service\"}, http_method)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Method",
-        "multi": true,
-        "name": "http_method",
-        "options": [],
-        "query": {
-          "query": "label_values(http_client_request_duration_milliseconds_bucket{job=~\"$service\"}, http_method)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {
-          "selected": true,
-          "text": "All",
-          "value": "$__all"
-        },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
-        },
-        "definition": "label_values(http_client_request_duration_milliseconds_bucket{job=~\"$service\"}, status)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Status",
-        "multi": true,
-        "name": "status",
-        "options": [],
-        "query": {
-          "query": "label_values(http_client_request_duration_milliseconds_bucket{job=~\"$service\"}, status)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
+        "type": "custom"
       }
     ]
   },
@@ -1156,9 +1400,8 @@
     ]
   },
   "timezone": "browser",
-  "title": "Auth-Service - Latency & p99 Performance Dashboard",
+  "title": "Ecommerce Microservices - Production SRE & Latency Dashboard",
   "uid": "p99-latency-monitoring",
-  "version": 3,
+  "version": 4,
   "weekStart": ""
 }
-

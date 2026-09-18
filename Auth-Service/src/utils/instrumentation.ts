@@ -30,7 +30,19 @@ const sdk = new NodeSDK({
       aggregation: {
         type: AggregationType.EXPLICIT_BUCKET_HISTOGRAM,
         options: {
-          boundaries: [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300],
+          boundaries: [
+            5, 10, 25, 50, 75, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300,
+            1500, 2000, 3000, 5000,
+          ],
+        },
+      },
+    },
+    {
+      instrumentName: 'auth.dependency.duration',
+      aggregation: {
+        type: AggregationType.EXPLICIT_BUCKET_HISTOGRAM,
+        options: {
+          boundaries: [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000],
         },
       },
     },

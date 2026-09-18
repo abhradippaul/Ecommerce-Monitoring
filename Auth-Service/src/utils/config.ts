@@ -36,7 +36,11 @@ export const config = {
   jwtPublicKey: process.env.JWT_PUBLIC_KEY || '',
   jwtPrivateKey: process.env.JWT_PRIVATE_KEY || '',
   jwtKeyId: process.env.JWT_KEY_ID || '',
-  otelExporterOtlpTracesEndpoint: process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || 'http://localhost:4318/v1/traces',
-  otelExporterOtlpMetricsEndpoint: process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT || 'http://localhost:4318/v1/metrics',
-  otelExporterOtlpLogsEndpoint: process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT || 'http://localhost:4318/v1/logs',
+  otelExporterOtlpTracesEndpoint:
+    process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || 'http://localhost:4318/v1/traces',
+  otelExporterOtlpMetricsEndpoint:
+    process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT || 'http://localhost:4318/v1/metrics',
+  otelExporterOtlpLogsEndpoint:
+    process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT || 'http://localhost:4318/v1/logs',
+  rabbitmqUri: process.env.RABBITMQ_URI || 'amqp://kalo:kalo@192.168.1.203',
 };

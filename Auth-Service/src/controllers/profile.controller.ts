@@ -63,6 +63,7 @@ export const getProfile = async (req: Request, res: Response) => {
       } else {
         logger.warn(`Get profile error: ${err.message}`, logPayload);
       }
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -138,6 +139,7 @@ export const getDetailedProfile = async (req: Request, res: Response) => {
       } else {
         logger.warn(`Get detailed profile error: ${err.message}`, logPayload);
       }
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -205,6 +207,7 @@ export const updateProfile = async (req: Request, res: Response) => {
         http_status_code: 200,
         duration_ms: Date.now() - start,
       });
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -231,6 +234,7 @@ export const updateProfile = async (req: Request, res: Response) => {
       } else {
         logger.warn(`Update profile error: ${err.message}`, logPayload);
       }
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -289,6 +293,7 @@ export const deleteProfile = async (req: Request, res: Response) => {
         http_status_code: 200,
         duration_ms: Date.now() - start,
       });
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -314,6 +319,7 @@ export const deleteProfile = async (req: Request, res: Response) => {
       } else {
         logger.warn(`Delete profile error: ${err.message}`, logPayload);
       }
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -384,6 +390,7 @@ export const getAvatarPresignedUrl = async (req: Request, res: Response) => {
       } else {
         logger.warn(`Get avatar presigned URL error: ${err.message}`, logPayload);
       }
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -436,6 +443,7 @@ export const getPreviewPresignedUrl = async (req: Request, res: Response) => {
         http_status_code: 200,
         duration_ms: Date.now() - start,
       });
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,
@@ -462,6 +470,7 @@ export const getPreviewPresignedUrl = async (req: Request, res: Response) => {
       } else {
         logger.warn(`Get presigned preview URL error: ${err.message}`, logPayload);
       }
+      res.locals._metricsRecorded = true;
       latencyHistogram.record(Date.now() - start, {
         route,
         http_method: httpMethod,

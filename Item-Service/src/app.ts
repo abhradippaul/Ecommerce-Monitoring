@@ -1,6 +1,7 @@
 import express from 'express';
 import type { Request, Response, NextFunction, Express } from 'express';
 import { loggerMiddleware } from './middleware/logger.middleware.js';
+import { httpMetricsMiddleware } from './utils/metrics.js';
 import healthRoutes from './routes/health.routes.js';
 import infoRoutes from './routes/info.routes.js';
 import itemRoutes from './routes/item.routes.js';
@@ -27,6 +28,7 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(httpMetricsMiddleware);
 app.use(loggerMiddleware);
 
 app.use('/api/v1/items/health', healthRoutes);

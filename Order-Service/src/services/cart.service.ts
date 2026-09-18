@@ -15,6 +15,34 @@ export class CartService {
     return await Cart.findOne({ userId });
   }
 
+  async createCart(userId: string): Promise<ICart> {
+    const existingCart = await Cart.findOne({ userId });
+    if (existingCart) {
+      return existingCart;
+    }
+
+    try {
+      const cart = new Cart({
+        userId,
+        items: [],
+        totalPrice: 0,
+        totalQuantity: 0,
+      });
+      return await cart.save();
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code: unknown }).code === 11000
+      ) {
+        const cart = await Cart.findOne({ userId });
+        if (cart) return cart;
+      }
+      throw error;
+    }
+  }
+
   async getCartCount(
     userId: string
   ): Promise<{ count: number; totalQuantity: number; uniqueItems: number }> {
@@ -75,7 +103,7 @@ export class CartService {
     productId: string,
     quantity: number
   ): Promise<ICart | null> {
-    let cart = await Cart.findOne({ userId });
+    const cart = await Cart.findOne({ userId });
     if (!cart) {
       return null;
     }
@@ -97,7 +125,7 @@ export class CartService {
   }
 
   async removeItem(userId: string, productId: string): Promise<ICart | null> {
-    let cart = await Cart.findOne({ userId });
+    const cart = await Cart.findOne({ userId });
     if (!cart) {
       return null;
     }
@@ -150,7 +178,7 @@ export class CartService {
   }
 
   async clearCart(userId: string): Promise<ICart | null> {
-    let cart = await Cart.findOne({ userId });
+    const cart = await Cart.findOne({ userId });
     if (!cart) {
       return null;
     }

@@ -1,7 +1,7 @@
 services:
   # Infrastructure Services
   valkey:
-    image: valkey/valkey:7-alpine3.23
+    image: valkey/valkey:9.2-alpine
     ports:
       - "6379:6379"
     networks:
@@ -35,6 +35,12 @@ services:
     depends_on:
       - rabbitmq
       - valkey
+      - otel-collector
+    environment:
+      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4318/v1/metrics
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+      - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://otel-collector:4318/v1/logs
+      - SERVICE_NAME=auth-service
     env_file:
       - ./Auth-Service/.env
     volumes:
@@ -51,6 +57,12 @@ services:
     depends_on:
       - rabbitmq
       - valkey
+      - otel-collector
+    environment:
+      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4318/v1/metrics
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+      - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://otel-collector:4318/v1/logs
+      - SERVICE_NAME=item-service
     env_file:
       - ./Item-Service/.env
     volumes:
@@ -79,6 +91,12 @@ services:
     depends_on:
       - rabbitmq
       - valkey
+      - otel-collector
+    environment:
+      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4318/v1/metrics
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+      - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://otel-collector:4318/v1/logs
+      - SERVICE_NAME=order-service
     env_file:
       - ./Order-Service/.env
     volumes:

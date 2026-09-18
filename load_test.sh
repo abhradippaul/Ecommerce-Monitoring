@@ -1,1 +1,1 @@
-BASE_URL="http://localhost:3002" DURATION=240 CONCURRENCY=45 FAILURE_RATE=0.1 python3 scripts/login_load_test.py
+DURATION=600 CONCURRENCY=150 FAILURE_RATE=0.1 python3 scripts/login_load_test.py
