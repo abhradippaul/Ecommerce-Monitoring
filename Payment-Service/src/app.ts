@@ -4,8 +4,7 @@ import { loggerMiddleware } from './middleware/logger.middleware.js';
 import { httpMetricsMiddleware } from './utils/metrics.js';
 import healthRoutes from './routes/health.routes.js';
 import infoRoutes from './routes/info.routes.js';
-import orderRoutes from './routes/order.routes.js';
-import cartRoutes from './routes/cart.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
 import logger from './utils/logger.js';
 
 const app: Express = express();
@@ -36,17 +35,8 @@ app.use(loggerMiddleware);
 
 app.use('/health', healthRoutes);
 app.use('/info', infoRoutes);
-app.use('/orders', orderRoutes);
-app.use('/api/v1/orders', orderRoutes);
-app.use('/cart', cartRoutes);
-app.use('/api/v1/cart', cartRoutes);
-
-app.get('/slow', async (req: Request, res: Response) => {
-  const duration = parseInt(req.query.duration as string) || 3000;
-  logger.info(`Simulating slow request, ${duration}`);
-  await new Promise(resolve => setTimeout(resolve, duration));
-  res.json({ status: 'slow', duration });
-});
+app.use('/payments', paymentRoutes);
+app.use('/api/v1/payments', paymentRoutes);
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

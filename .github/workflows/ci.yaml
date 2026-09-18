@@ -75,6 +75,10 @@ jobs:
               - 'Auth-Service/**'
               - '.github/workflows/service-ci.yaml'
               - '.github/workflows/ci.yaml'
+            payment:
+              - 'Payment-Service/**'
+              - '.github/workflows/service-ci.yaml'
+              - '.github/workflows/ci.yaml'
             frontend:
               - 'frontend/**'
               - '.github/workflows/service-ci.yaml'
@@ -88,6 +92,7 @@ jobs:
           [ "${{ steps.filter.outputs.frontend }}" = "true" ] && services+=('"frontend"')
           [ "${{ steps.filter.outputs.item }}" = "true" ] && services+=('"Item-Service"')
           [ "${{ steps.filter.outputs.order }}" = "true" ] && services+=('"Order-Service"')
+          [ "${{ steps.filter.outputs.payment }}" = "true" ] && services+=('"Payment-Service"')
           json=$(IFS=,; echo "[${services[*]}]")
           echo "matrix=$json" >> "$GITHUB_OUTPUT"
           echo "Node services to build: $json"

@@ -7,6 +7,8 @@ import {
   uploadAvatarUrlSchema,
 } from '../schemas/user.schema.js';
 import logger from '../utils/logger.js';
+import { sendQueueMsg } from '../utils/rabbitmq.js';
+import { userCreatedEventSchema } from '../schemas/events.schema.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/token.js';
 import type { AuthenticatedRequest } from '../utils/types.js';
 import {
@@ -63,6 +65,20 @@ export const register = async (req: Request, res: Response) => {
         validationErrorCounter.add(1, { error_type: 'failed_to_register' });
         throw new HttpError(400, 'Registration failed', 'failed_to_register');
       }
+
+      await withSpan('register.triggerCartCreation', async () => {
+        try {
+          const validatedEvent = userCreatedEventSchema.parse({
+            userId: user._id.toString(),
+          });
+          await sendQueueMsg('user-created', JSON.stringify(validatedEvent));
+        } catch (queueError: unknown) {
+          logger.error('Failed to trigger cart creation on user registration:', {
+            error: queueError instanceof Error ? queueError.message : queueError,
+            user_id: user._id,
+          });
+        }
+      });
 
       logger.info('User registered', {
         user_id: user._id,
