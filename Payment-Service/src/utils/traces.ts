@@ -59,8 +59,7 @@ async function withHttpSpan<T>(
     if (req.method) {
       span.setAttribute(ATTR_HTTP_REQUEST_METHOD, req.method);
     }
-    const path =
-      req.baseUrl && req.path ? `${req.baseUrl}${req.path}` : req.originalUrl || req.url;
+    const path = req.baseUrl && req.path ? `${req.baseUrl}${req.path}` : req.originalUrl || req.url;
     if (path) {
       span.setAttribute(ATTR_URL_PATH, path);
     }
