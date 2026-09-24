@@ -2,7 +2,7 @@ import { config as dotenvConfig } from 'dotenv';
 dotenvConfig();
 
 export const config = {
-  port: process.env.PORT || 3004,
+  port: process.env.PORT || 3005,
   nodeEnv: process.env.NODE_ENV || 'dev',
   appName: process.env.APP_NAME || 'payment-service',
   serviceName: process.env.SERVICE_NAME || process.env.OTEL_SERVICE_NAME || 'payment-service',
@@ -21,4 +21,6 @@ export const config = {
     process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT || 'http://localhost:4318/v1/metrics',
   otelExporterOtlpLogsEndpoint:
     process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT || 'http://localhost:4318/v1/logs',
+  grpcPort: Number(process.env.GRPC_PORT) || 50055,
+  orderServiceGrpcUrl: process.env.ORDER_SERVICE_GRPC_URL || 'localhost:50051',
 };

@@ -189,10 +189,9 @@ export function getRoutePattern(req: Request): string {
     const baseUrl = req.baseUrl || '';
     return `${baseUrl}${req.route.path}`;
   }
-  const rawPath =
-    req.baseUrl
-      ? `${req.baseUrl}${req.path || ''}`
-      : req.path || req.originalUrl?.split('?')[0] || '/';
+  const rawPath = req.baseUrl
+    ? `${req.baseUrl}${req.path || ''}`
+    : req.path || req.originalUrl?.split('?')[0] || '/';
   return rawPath
     .replace(/[0-9a-fA-F]{24}/g, ':id')
     .replace(

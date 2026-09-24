@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package cart;
+
+service CartService {
+  rpc GetCart (GetCartRequest) returns (Cart);
+  rpc ListCarts (ListCartsRequest) returns (stream Cart);
+}
+
+message GetCartRequest {
+  string userId = 1;
+}
+
+message ListCartsRequest {}
+
+message CartItem {
+  string productId = 1;
+  string name = 2;
+  double price = 3;
+  int32 quantity = 4;
+  string category = 5;
+  repeated string images = 6;
+}
+
+message Cart {
+  string id = 1;
+  string userId = 2;
+  repeated CartItem items = 3;
+  double totalPrice = 4;
+  int32 totalQuantity = 5;
+  string createdAt = 6;
+  string updatedAt = 7;
+}
