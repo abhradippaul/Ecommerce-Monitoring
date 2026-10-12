@@ -18,7 +18,6 @@ permissions:
   id-token: write
 
 env:
-  PYTHON_VERSION: '3.12'
   COMMIT_SHA: ${{ github.sha }}
 
 jobs:
@@ -198,7 +197,6 @@ jobs:
     uses: ./.github/workflows/python-service-ci.yaml
     with:
       service: ${{ matrix.service }}
-      python-version: ${{ env.PYTHON_VERSION }}
     secrets: inherit
 
   python-push:
