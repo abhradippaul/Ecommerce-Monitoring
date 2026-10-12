@@ -104,6 +104,29 @@ services:
     networks:
       - ecommerce-monitoring
 
+  payment:
+    build:
+      context: ./Payment-Service
+      dockerfile: Dockerfile
+    ports:
+      - "3005:3005"
+      - "50055:50055"
+    depends_on:
+      - rabbitmq
+      - valkey
+      - otel-collector
+    environment:
+      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4318/v1/metrics
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+      - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://otel-collector:4318/v1/logs
+      - SERVICE_NAME=payment-service
+    env_file:
+      - ./Payment-Service/.env
+    volumes:
+      - ./Payment-Service/keys:/app/keys:ro
+    networks:
+      - ecommerce-monitoring
+
   frontend:
     build:
       context: ./frontend
@@ -190,7 +213,7 @@ services:
     image: grafana/grafana
     container_name: grafana
     ports:
-      - "3005:3000"
+      - "3008:3000"
     volumes:
       - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
       - ./grafana-dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro

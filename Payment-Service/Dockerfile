@@ -1,31 +1,24 @@
-FROM node:24-alpine AS base
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
 WORKDIR /app
-RUN corepack enable
 
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 
-FROM base AS deps
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
+COPY app ./app
+COPY keys ./keys
 
-FROM base AS builder
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-RUN pnpm run build
+RUN mkdir -p logs && chown -R appuser:appgroup /app
 
+USER appuser
 
-FROM base AS runner
-WORKDIR /app
-ENV NODE_ENV=production
+EXPOSE 3005 50055
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --prod --frozen-lockfile
-RUN mkdir -p logs && chown -R node:node logs
-
-COPY --from=builder /app/dist ./dist
-
-USER node
-
-EXPOSE 3004
-
-CMD ["node", "dist/index.js"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "3005"]
